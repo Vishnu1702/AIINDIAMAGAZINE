@@ -18,8 +18,8 @@ export default function HomePage({ sections, preferences, onUpdatePreferences }:
     const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState({
         totalArticles: 0,
-        dailyReads: 0,
-        activeUsers: 1247,
+        sourceFeeds: 0,
+        lastUpdated: '',
     });
 
     useEffect(() => {
@@ -67,14 +67,18 @@ export default function HomePage({ sections, preferences, onUpdatePreferences }:
             const sectionArticleCount = Object.values(sectionData).flat().length;
             const totalArticles = combinedArticles.length + sectionArticleCount;
 
-            // More realistic calculations
-            const dailyReads = Math.floor(totalArticles * 15 + Math.random() * 50); // 15x multiplier + random factor
-            const activeUsers = Math.floor(1200 + Math.random() * 800 + totalArticles * 5); // Base users + random + article factor
+            // Honest metrics - real data only
+            const sourceFeeds = 4; // NewsAPI.org, NewsAPI.ai, NewsData.io, RSS feeds
+            const lastUpdated = new Date().toLocaleTimeString('en-US', { 
+                hour: '2-digit', 
+                minute: '2-digit',
+                hour12: false 
+            });
 
             setStats({
                 totalArticles,
-                dailyReads,
-                activeUsers
+                sourceFeeds,
+                lastUpdated
             });
 
         } catch (error) {
@@ -109,15 +113,15 @@ export default function HomePage({ sections, preferences, onUpdatePreferences }:
                         <div className="flex space-x-4 text-center text-sm">
                             <div>
                                 <div className="text-lg font-bold">{stats.totalArticles}</div>
-                                <div className="text-blue-200 text-xs">Articles</div>
+                                <div className="text-blue-200 text-xs">Fresh Articles</div>
                             </div>
                             <div>
-                                <div className="text-lg font-bold">{stats.dailyReads}</div>
-                                <div className="text-blue-200 text-xs">Reads</div>
+                                <div className="text-lg font-bold">{stats.sourceFeeds}</div>
+                                <div className="text-blue-200 text-xs">News Sources</div>
                             </div>
                             <div>
-                                <div className="text-lg font-bold">{stats.activeUsers.toLocaleString()}</div>
-                                <div className="text-blue-200 text-xs">Readers</div>
+                                <div className="text-lg font-bold">{stats.lastUpdated}</div>
+                                <div className="text-blue-200 text-xs">Last Updated</div>
                             </div>
                         </div>
                     </div>
