@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Bookmark, Trash2, ExternalLink } from 'lucide-react';
+import { Bookmark, Trash2 } from 'lucide-react';
 import type { UserPreferences, NewsArticle } from '../types/news';
 import NewsCard from '../components/NewsCard';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -70,31 +70,32 @@ export default function BookmarksPage({ preferences, onUpdatePreferences }: Book
         }
     };
 
-    const exportBookmarks = () => {
-        const bookmarksData = {
-            exportDate: new Date().toISOString(),
-            articles: bookmarkedArticles.map(article => ({
-                title: article.title,
-                url: article.url,
-                source: article.source.name,
-                publishedAt: article.publishedAt,
-                tags: article.tags,
-            })),
-        };
+    // Commented out for now - can be restored later
+    // const exportBookmarks = () => {
+    //     const bookmarksData = {
+    //         exportDate: new Date().toISOString(),
+    //         articles: bookmarkedArticles.map(article => ({
+    //             title: article.title,
+    //             url: article.url,
+    //             source: article.source.name,
+    //             publishedAt: article.publishedAt,
+    //             tags: article.tags,
+    //         })),
+    //     };
 
-        const blob = new Blob([JSON.stringify(bookmarksData, null, 2)], {
-            type: 'application/json',
-        });
+    //     const blob = new Blob([JSON.stringify(bookmarksData, null, 2)], {
+    //         type: 'application/json',
+    //     });
 
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `ai-news-bookmarks-${new Date().toISOString().split('T')[0]}.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-    };
+    //     const url = URL.createObjectURL(blob);
+    //     const a = document.createElement('a');
+    //     a.href = url;
+    //     a.download = `ai-news-bookmarks-${new Date().toISOString().split('T')[0]}.json`;
+    //     document.body.appendChild(a);
+    //     a.click();
+    //     document.body.removeChild(a);
+    //     URL.revokeObjectURL(url);
+    // };
 
     if (loading) {
         return (
