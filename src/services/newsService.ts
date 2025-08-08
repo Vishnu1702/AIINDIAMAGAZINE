@@ -12,6 +12,15 @@ class NewsService {
         newsData: 'https://newsdata.io/api/1',
     };
 
+    // Create SVG placeholder images as data URIs
+    private createPlaceholderImage(text: string, bgColor: string = '#0066CC'): string {
+        const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="200" viewBox="0 0 400 200">
+            <rect width="400" height="200" fill="${bgColor}"/>
+            <text x="50%" y="50%" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="white" text-anchor="middle" dominant-baseline="middle">${text}</text>
+        </svg>`;
+        return `data:image/svg+xml;base64,${btoa(svg)}`;
+    }
+
     // Indian news sources RSS feeds
     private readonly INDIAN_RSS_FEEDS = {
         et_tech: 'https://economictimes.indiatimes.com/tech/rssfeeds/13357270.cms',
@@ -251,7 +260,7 @@ class NewsService {
                 description: 'TCS announces new AI research facility focusing on generative AI and machine learning solutions for enterprises.',
                 content: 'Tata Consultancy Services has inaugurated a new AI Center of Excellence in Bengaluru...',
                 url: 'https://inc42.com/buzz/tcs-ai-center-bengaluru/',
-                urlToImage: 'https://via.placeholder.com/400x200/FF6B35/ffffff?text=TCS+AI',
+                urlToImage: this.createPlaceholderImage('TCS AI', '#FF6B35'),
                 publishedAt: new Date(Date.now() - Math.random() * 86400000).toISOString(),
                 source: indianSources[0],
                 author: 'Rishabh Mansur',
@@ -267,7 +276,7 @@ class NewsService {
                 description: 'New breakthrough in natural language processing specifically designed for Hindi, Tamil, and Bengali.',
                 content: 'Researchers at IIT Delhi have developed an advanced AI model...',
                 url: 'https://analyticsindiamag.com/iit-delhi-indian-language-ai/',
-                urlToImage: 'https://via.placeholder.com/400x200/FF6B35/ffffff?text=IIT+AI',
+                urlToImage: this.createPlaceholderImage('IIT AI', '#FF6B35'),
                 publishedAt: new Date(Date.now() - Math.random() * 86400000).toISOString(),
                 source: indianSources[2],
                 author: 'Priya Sharma',
@@ -286,7 +295,7 @@ class NewsService {
                 description: 'Walmart-backed fintech unicorn PhonePe secures major funding for expansion across Southeast Asia.',
                 content: 'PhonePe, India\'s leading digital payments platform, has raised $850 million...',
                 url: 'https://yourstory.com/2024/03/phonepe-funding-850-million/',
-                urlToImage: 'https://via.placeholder.com/400x200/FF6B35/ffffff?text=PhonePe',
+                urlToImage: this.createPlaceholderImage('PhonePe', '#FF6B35'),
                 publishedAt: new Date(Date.now() - Math.random() * 86400000).toISOString(),
                 source: indianSources[1],
                 author: 'Sindhu Hariharan',
@@ -302,7 +311,7 @@ class NewsService {
                 description: 'Former unicorn Byju\'s announces comprehensive restructuring plan focusing on sustainable growth.',
                 content: 'Byju\'s, once India\'s most valuable startup, is implementing a major restructuring...',
                 url: 'https://entrackr.com/2024/03/byjus-restructuring-plan/',
-                urlToImage: 'https://via.placeholder.com/400x200/FF6B35/ffffff?text=Byjus',
+                urlToImage: this.createPlaceholderImage('Byjus', '#FF6B35'),
                 publishedAt: new Date(Date.now() - Math.random() * 86400000).toISOString(),
                 source: indianSources[4],
                 author: 'Harsh Upadhyay',
@@ -327,7 +336,7 @@ class NewsService {
                 description: 'The company reveals significant improvements in natural language processing capabilities with their latest model update.',
                 content: 'OpenAI has announced a major breakthrough in artificial intelligence...',
                 url: 'https://example.com/openai-breakthrough',
-                urlToImage: 'https://via.placeholder.com/400x200/0066CC/ffffff?text=AI+News',
+                urlToImage: this.createPlaceholderImage('AI News', '#0066CC'),
                 publishedAt: '2025-08-08T10:30:00Z',
                 source: { id: 'techcrunch', name: 'TechCrunch' },
                 author: 'Sarah Johnson',
@@ -342,7 +351,7 @@ class NewsService {
                 description: 'The fintech unicorn introduces advanced AI algorithms to help retail investors make better trading decisions.',
                 content: 'Zerodha, India\'s largest retail stockbroker, has launched new AI-powered features...',
                 url: 'https://example.com/zerodha-ai',
-                urlToImage: 'https://via.placeholder.com/400x200/FF6B35/ffffff?text=India+AI',
+                urlToImage: this.createPlaceholderImage('India AI', '#FF6B35'),
                 publishedAt: '2025-08-08T08:15:00Z',
                 source: { id: 'economic-times', name: 'Economic Times' },
                 author: 'Raj Patel',
@@ -357,7 +366,7 @@ class NewsService {
                 description: 'VC investments reach record highs with AI and climate tech startups leading the charge.',
                 content: 'Venture capital funding has reached unprecedented levels this quarter...',
                 url: 'https://example.com/vc-funding-q3',
-                urlToImage: 'https://via.placeholder.com/400x200/00CC66/ffffff?text=Startup+News',
+                urlToImage: this.createPlaceholderImage('Startup News', '#00CC66'),
                 publishedAt: '2025-08-08T06:45:00Z',
                 source: { id: 'crunchbase', name: 'Crunchbase News' },
                 author: 'Michael Chen',
@@ -372,7 +381,7 @@ class NewsService {
                 description: 'The AI-powered healthcare platform plans to expand across Southeast Asia with the new funding.',
                 content: 'A Bengaluru-based healthtech startup has successfully raised $50 million...',
                 url: 'https://example.com/healthtech-funding',
-                urlToImage: 'https://via.placeholder.com/400x200/FF6B35/ffffff?text=India+Startup',
+                urlToImage: this.createPlaceholderImage('India Startup', '#FF6B35'),
                 publishedAt: '2025-08-08T05:20:00Z',
                 source: { id: 'yourstory', name: 'YourStory' },
                 author: 'Priya Sharma',
@@ -387,7 +396,7 @@ class NewsService {
                 description: 'The new device promises breakthrough immersive experiences powered by advanced AI processing.',
                 content: 'Meta has revealed its latest virtual reality headset featuring cutting-edge AI capabilities...',
                 url: 'https://example.com/meta-vr-ai',
-                urlToImage: 'https://via.placeholder.com/400x200/0066CC/ffffff?text=VR+AI',
+                urlToImage: this.createPlaceholderImage('VR AI', '#0066CC'),
                 publishedAt: '2025-08-08T04:10:00Z',
                 source: { id: 'the-verge', name: 'The Verge' },
                 author: 'Alex Thompson',
@@ -402,7 +411,7 @@ class NewsService {
                 description: 'New initiative aims to boost AI research and development across Indian universities and startups.',
                 content: 'The Indian government has announced a major $2 billion fund dedicated to AI innovation...',
                 url: 'https://example.com/india-ai-fund',
-                urlToImage: 'https://via.placeholder.com/400x200/FF6B35/ffffff?text=India+AI+Fund',
+                urlToImage: this.createPlaceholderImage('India AI Fund', '#FF6B35'),
                 publishedAt: '2025-08-08T03:30:00Z',
                 source: { id: 'livemint', name: 'LiveMint' },
                 author: 'Ankit Verma',
@@ -434,7 +443,7 @@ class NewsService {
             description: article.description || '',
             content: article.content || '',
             url: article.url,
-            urlToImage: article.urlToImage || '/placeholder-news.jpg',
+            urlToImage: article.urlToImage || this.createPlaceholderImage('News'),
             publishedAt: article.publishedAt,
             source: {
                 id: article.source.id || 'unknown',
@@ -455,7 +464,7 @@ class NewsService {
             description: article.body?.substring(0, 200) + '...' || '',
             content: article.body || '',
             url: article.url,
-            urlToImage: article.image || '/placeholder-news.jpg',
+            urlToImage: article.image || this.createPlaceholderImage('News'),
             publishedAt: article.dateTime,
             source: {
                 id: article.source.id || 'unknown',
@@ -476,7 +485,7 @@ class NewsService {
             description: article.description || '',
             content: article.content || article.description || '',
             url: article.link,
-            urlToImage: article.image_url || '/placeholder-news.jpg',
+            urlToImage: article.image_url || this.createPlaceholderImage('News'),
             publishedAt: article.pubDate,
             source: {
                 id: article.source_id || 'unknown',
@@ -491,7 +500,12 @@ class NewsService {
     }
 
     private generateId(url: string): string {
-        return btoa(url).replace(/[^a-zA-Z0-9]/g, '').substring(0, 10);
+        // Create a more unique ID by combining timestamp and URL hash
+        const timestamp = Date.now().toString(36);
+        const urlHash = btoa(url).replace(/[^a-zA-Z0-9]/g, '');
+        // Take more characters from the hash to ensure uniqueness
+        const hashPart = urlHash.substring(0, 20);
+        return `${timestamp}_${hashPart}`;
     }
 
     private extractTags(text: string): string[] {
@@ -515,12 +529,19 @@ class NewsService {
 
     private removeDuplicates(articles: NewsArticle[]): NewsArticle[] {
         const seen = new Set();
+        const seenIds = new Set();
         return articles.filter(article => {
-            const key = article.title.toLowerCase().trim();
-            if (seen.has(key)) {
+            const titleKey = article.title.toLowerCase().trim();
+            const urlKey = article.url;
+
+            // Check for duplicate titles or URLs
+            if (seen.has(titleKey) || seen.has(urlKey) || seenIds.has(article.id)) {
                 return false;
             }
-            seen.add(key);
+
+            seen.add(titleKey);
+            seen.add(urlKey);
+            seenIds.add(article.id);
             return true;
         });
     }

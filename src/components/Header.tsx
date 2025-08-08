@@ -10,6 +10,10 @@ interface HeaderProps {
 export default function Header({ onMenuClick, darkMode, onThemeToggle }: HeaderProps) {
     const navigate = useNavigate();
 
+    const handleBrandClick = () => {
+        navigate('/');
+    };
+
     const handleSearchClick = () => {
         navigate('/search');
     };
@@ -32,12 +36,12 @@ export default function Header({ onMenuClick, darkMode, onThemeToggle }: HeaderP
                         </button>
 
                         <div className="flex items-center ml-2 lg:ml-0">
-                            <div className="text-2xl font-bold text-ai-blue dark:text-white">
+                            <button
+                                onClick={handleBrandClick}
+                                className="text-2xl font-bold text-ai-blue dark:text-white hover:text-ai-blue/80 dark:hover:text-gray-200 transition-colors cursor-pointer"
+                            >
                                 DesiAIMagazine
-                            </div>
-                            <div className="ml-2 text-xs text-gray-500 dark:text-gray-400 hidden sm:block">
-                                Your source for AI & Startup news
-                            </div>
+                            </button>
                         </div>
                     </div>
 

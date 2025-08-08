@@ -94,27 +94,31 @@ export default function HomePage({ sections, preferences, onUpdatePreferences }:
 
     return (
         <div className="space-y-8">
-            {/* Hero Section */}
-            <section className="bg-gradient-to-r from-ai-blue to-startup-green rounded-2xl p-8 text-white">
-                <div className="max-w-4xl mx-auto text-center">
-                    <h1 className="text-4xl font-bold mb-4">
-                        Stay Ahead with AI & Startup News
-                    </h1>
-                    <p className="text-xl text-blue-100 mb-6">
-                        Curated news from around the world with dedicated coverage for India's growing tech ecosystem
-                    </p>
-                    <div className="flex justify-center space-x-8 text-center">
-                        <div>
-                            <div className="text-2xl font-bold">{stats.totalArticles}</div>
-                            <div className="text-blue-200 text-sm">Articles Today</div>
+            {/* Hero Section - Compact */}
+            <section className="bg-gradient-to-r from-ai-blue to-startup-green rounded-xl p-4 text-white">
+                <div className="max-w-4xl mx-auto">
+                    <div className="flex flex-col sm:flex-row items-center justify-between">
+                        <div className="text-center sm:text-left mb-3 sm:mb-0">
+                            <h1 className="text-2xl font-bold mb-1">
+                                Latest AI & Startup Stories
+                            </h1>
+                            <p className="text-sm text-blue-100">
+                                Curated news worldwide with India focus
+                            </p>
                         </div>
-                        <div>
-                            <div className="text-2xl font-bold">{stats.dailyReads}</div>
-                            <div className="text-blue-200 text-sm">Daily Reads</div>
-                        </div>
-                        <div>
-                            <div className="text-2xl font-bold">{stats.activeUsers.toLocaleString()}</div>
-                            <div className="text-blue-200 text-sm">Active Readers</div>
+                        <div className="flex space-x-4 text-center text-sm">
+                            <div>
+                                <div className="text-lg font-bold">{stats.totalArticles}</div>
+                                <div className="text-blue-200 text-xs">Articles</div>
+                            </div>
+                            <div>
+                                <div className="text-lg font-bold">{stats.dailyReads}</div>
+                                <div className="text-blue-200 text-xs">Reads</div>
+                            </div>
+                            <div>
+                                <div className="text-lg font-bold">{stats.activeUsers.toLocaleString()}</div>
+                                <div className="text-blue-200 text-xs">Readers</div>
+                            </div>
                         </div>
                     </div>
                 </div>

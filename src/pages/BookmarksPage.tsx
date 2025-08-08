@@ -121,13 +121,14 @@ export default function BookmarksPage({ preferences, onUpdatePreferences }: Book
 
                     {bookmarkedArticles.length > 0 && (
                         <div className="flex items-center space-x-3">
-                            <button
+                            {/* Export button temporarily hidden */}
+                            {/* <button
                                 onClick={exportBookmarks}
                                 className="flex items-center px-4 py-2 bg-startup-green text-white rounded-lg hover:bg-startup-green/90 transition-colors"
                             >
                                 <ExternalLink size={16} className="mr-2" />
                                 Export
-                            </button>
+                            </button> */}
 
                             <button
                                 onClick={clearAllBookmarks}

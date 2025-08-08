@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { X, Home, Search, Bookmark, Settings } from 'lucide-react';
+import { X, Home, Search, Bookmark } from 'lucide-react';
 import type { NewsSection } from '../types/news';
 
 interface SidebarProps {
@@ -65,8 +65,8 @@ export default function Sidebar({ sections, isOpen, onClose }: SidebarProps) {
                                     to="/"
                                     onClick={onClose}
                                     className={`flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors ${isActive('/')
-                                            ? 'bg-ai-blue text-white'
-                                            : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                                        ? 'bg-ai-blue text-white'
+                                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                                         }`}
                                 >
                                     <Home size={18} className="mr-3" />
@@ -78,8 +78,8 @@ export default function Sidebar({ sections, isOpen, onClose }: SidebarProps) {
                                     to="/search"
                                     onClick={onClose}
                                     className={`flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors ${isActive('/search')
-                                            ? 'bg-ai-blue text-white'
-                                            : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                                        ? 'bg-ai-blue text-white'
+                                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                                         }`}
                                 >
                                     <Search size={18} className="mr-3" />
@@ -91,8 +91,8 @@ export default function Sidebar({ sections, isOpen, onClose }: SidebarProps) {
                                     to="/bookmarks"
                                     onClick={onClose}
                                     className={`flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors ${isActive('/bookmarks')
-                                            ? 'bg-ai-blue text-white'
-                                            : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                                        ? 'bg-ai-blue text-white'
+                                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                                         }`}
                                 >
                                     <Bookmark size={18} className="mr-3" />
@@ -114,8 +114,8 @@ export default function Sidebar({ sections, isOpen, onClose }: SidebarProps) {
                                         to={`/section/${section.id}`}
                                         onClick={onClose}
                                         className={`flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors ${isActive(`/section/${section.id}`)
-                                                ? `bg-${section.color} text-white`
-                                                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                                            ? `bg-${section.color} text-white`
+                                            : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                                             }`}
                                     >
                                         <span className="mr-3 text-lg">{getSectionIcon(section)}</span>
@@ -127,18 +127,6 @@ export default function Sidebar({ sections, isOpen, onClose }: SidebarProps) {
                                     </Link>
                                 </li>
                             ))}
-                        </ul>
-                    </div>
-
-                    {/* Settings */}
-                    <div className="px-4 mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-                        <ul className="space-y-2">
-                            <li>
-                                <button className="flex items-center w-full px-3 py-2 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                                    <Settings size={18} className="mr-3" />
-                                    Settings
-                                </button>
-                            </li>
                         </ul>
                     </div>
                 </nav>
