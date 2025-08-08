@@ -1,0 +1,29 @@
+{
+    "name": "DesiAIMagazine",
+    "short_name": "DesiAI",
+    "description": "Your source for AI & Startup news worldwide with dedicated coverage for India",
+    "start_url": "/",
+    "display": "standalone",
+    "theme_color": "#0066CC",
+    "background_color": "#ffffff",
+    "orientation": "portrait-primary",
+    "categories": [
+        "news",
+        "business",
+        "technology"
+    ],
+    "lang": "en",
+    "scope": "/",
+    "icons": [
+        {
+            "src": "/icon.svg",
+            "sizes": "any",
+            "type": "image/svg+xml"
+        },
+        {
+            "src": "/vite.svg",
+            "sizes": "any",
+            "type": "image/svg+xml"
+        }
+    ]
+}
