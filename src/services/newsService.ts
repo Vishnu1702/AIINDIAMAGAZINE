@@ -21,6 +21,93 @@ class NewsService {
         return `data:image/svg+xml;base64,${btoa(svg)}`;
     }
 
+    // Smart image URL handling with fallbacks
+    private getValidImageUrl(imageUrl: string | null | undefined, title: string, category: string): string {
+        // If we have a valid image URL, return it
+        if (imageUrl && this.isValidImageUrl(imageUrl)) {
+            return imageUrl;
+        }
+
+        // Create a contextual placeholder based on article content
+        const placeholderText = this.getPlaceholderText(title, category);
+        const placeholderColor = this.getPlaceholderColor(category);
+        
+        return this.createPlaceholderImage(placeholderText, placeholderColor);
+    }
+
+    // Check if image URL is likely valid
+    private isValidImageUrl(url: string): boolean {
+        if (!url || url.trim() === '') return false;
+        if (url === 'null' || url === 'undefined') return false;
+        
+        // Check for common image extensions
+        const imageExtensions = /\.(jpg|jpeg|png|gif|webp|svg)(\?.*)?$/i;
+        const hasImageExtension = imageExtensions.test(url);
+        
+        // Check for common image hosting patterns
+        const imageHostPatterns = /(images?|media|cdn|static|assets|img)/i;
+        const hasImageHost = imageHostPatterns.test(url);
+        
+        return hasImageExtension || hasImageHost || url.startsWith('data:image/');
+    }
+
+    // Generate contextual placeholder text
+    private getPlaceholderText(title: string = '', category: string): string {
+        const words = title.toLowerCase();
+        
+        // AI-related keywords
+        if (words.includes('ai') || words.includes('artificial') || words.includes('machine learning') || words.includes('ml')) {
+            return 'AI News';
+        }
+        
+        // Startup-related keywords  
+        if (words.includes('startup') || words.includes('funding') || words.includes('unicorn') || words.includes('venture')) {
+            return 'Startup';
+        }
+        
+        // Company-specific
+        if (words.includes('google') || words.includes('alphabet')) return 'Google';
+        if (words.includes('microsoft')) return 'Microsoft';
+        if (words.includes('openai') || words.includes('chatgpt')) return 'OpenAI';
+        if (words.includes('tesla')) return 'Tesla';
+        if (words.includes('meta') || words.includes('facebook')) return 'Meta';
+        if (words.includes('amazon')) return 'Amazon';
+        if (words.includes('apple')) return 'Apple';
+        if (words.includes('nvidia')) return 'NVIDIA';
+        if (words.includes('tcs')) return 'TCS';
+        if (words.includes('infosys')) return 'Infosys';
+        if (words.includes('wipro')) return 'Wipro';
+        
+        // Indian companies
+        if (words.includes('reliance')) return 'Reliance';
+        if (words.includes('flipkart')) return 'Flipkart';
+        if (words.includes('paytm')) return 'Paytm';
+        if (words.includes('byju')) return 'BYJU\'S';
+        if (words.includes('zomato')) return 'Zomato';
+        if (words.includes('swiggy')) return 'Swiggy';
+        
+        // Technology categories
+        if (words.includes('robot') || words.includes('automation')) return 'Robotics';
+        if (words.includes('crypto') || words.includes('bitcoin') || words.includes('blockchain')) return 'Crypto';
+        if (words.includes('cloud')) return 'Cloud';
+        if (words.includes('mobile') || words.includes('app')) return 'Mobile';
+        
+        // Default based on category
+        if (category === 'ai') return 'AI News';
+        if (category === 'startup') return 'Startup';
+        
+        return 'Tech News';
+    }
+
+    // Get color based on category and content
+    private getPlaceholderColor(category: string): string {
+        switch (category) {
+            case 'ai': return '#0066CC';           // AI Blue
+            case 'startup': return '#00CC66';     // Startup Green  
+            default: return '#6B7280';            // Gray for general tech
+        }
+    }
+
     // Indian news sources RSS feeds
     private readonly INDIAN_RSS_FEEDS = {
         et_tech: 'https://economictimes.indiatimes.com/tech/rssfeeds/13357270.cms',
@@ -443,7 +530,7 @@ class NewsService {
             description: article.description || '',
             content: article.content || '',
             url: article.url,
-            urlToImage: article.urlToImage || this.createPlaceholderImage('News'),
+            urlToImage: this.getValidImageUrl(article.urlToImage, article.title || '', filters.category || 'ai'),
             publishedAt: article.publishedAt,
             source: {
                 id: article.source.id || 'unknown',
@@ -464,7 +551,7 @@ class NewsService {
             description: article.body?.substring(0, 200) + '...' || '',
             content: article.body || '',
             url: article.url,
-            urlToImage: article.image || this.createPlaceholderImage('News'),
+            urlToImage: this.getValidImageUrl(article.image, article.title || '', filters.category || 'ai'),
             publishedAt: article.dateTime,
             source: {
                 id: article.source.id || 'unknown',
@@ -485,7 +572,7 @@ class NewsService {
             description: article.description || '',
             content: article.content || article.description || '',
             url: article.link,
-            urlToImage: article.image_url || this.createPlaceholderImage('News'),
+            urlToImage: this.getValidImageUrl(article.image_url, article.title || '', filters.category || 'ai'),
             publishedAt: article.pubDate,
             source: {
                 id: article.source_id || 'unknown',
