@@ -2,10 +2,13 @@ import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Header from './components/Header';
 import Sidebar from './components/Sidebar';
+import Footer from './components/Footer';
 import HomePage from './pages/HomePage';
 import SectionPage from './pages/SectionPage';
 import BookmarksPage from './pages/BookmarksPage';
 import SearchPage from './pages/SearchPage';
+import AboutPage from './pages/AboutPage';
+import PolicyPage from './pages/PolicyPage';
 import type { NewsSection, UserPreferences } from './types/news';
 import './App.css';
 
@@ -122,7 +125,10 @@ function App() {
                 <Route path="/section/:sectionId" element={<SectionPage sections={sections} preferences={preferences} onUpdatePreferences={updatePreferences} />} />
                 <Route path="/bookmarks" element={<BookmarksPage preferences={preferences} onUpdatePreferences={updatePreferences} />} />
                 <Route path="/search" element={<SearchPage />} />
+                <Route path="/about" element={<AboutPage />} />
+                <Route path="/policy" element={<PolicyPage />} />
               </Routes>
+              <Footer />
             </div>
           </main>
         </div>

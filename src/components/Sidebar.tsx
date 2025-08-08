@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { X, Home, Search, Bookmark } from 'lucide-react';
+import { X, Home, Search, Bookmark, Users, Shield } from 'lucide-react';
 import type { NewsSection } from '../types/news';
 
 interface SidebarProps {
@@ -106,6 +106,32 @@ export default function Sidebar({ sections, isOpen, onClose }: SidebarProps) {
                                 >
                                     <Bookmark size={18} className="mr-3" />
                                     Bookmarks
+                                </Link>
+                            </li>
+                            <li>
+                                <Link
+                                    to="/about"
+                                    onClick={onClose}
+                                    className={`flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors ${isActive('/about')
+                                        ? 'bg-ai-blue text-white'
+                                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                                        }`}
+                                >
+                                    <Users size={18} className="mr-3" />
+                                    About Us
+                                </Link>
+                            </li>
+                            <li>
+                                <Link
+                                    to="/policy"
+                                    onClick={onClose}
+                                    className={`flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors ${isActive('/policy')
+                                        ? 'bg-ai-blue text-white'
+                                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                                        }`}
+                                >
+                                    <Shield size={18} className="mr-3" />
+                                    Policy
                                 </Link>
                             </li>
                         </ul>
