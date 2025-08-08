@@ -26,6 +26,15 @@ export default function Sidebar({ sections, isOpen, onClose }: SidebarProps) {
         return colorMap[color] || 'text-gray-600';
     };
 
+    const getActiveSectionClasses = (color: string) => {
+        const colorMap: { [key: string]: string } = {
+            'ai-blue': 'bg-ai-blue text-white',
+            'startup-green': 'bg-startup-green text-white',
+            'india-orange': 'bg-india-orange text-white',
+        };
+        return colorMap[color] || 'bg-gray-600 text-white';
+    };
+
     return (
         <>
             {/* Overlay */}
@@ -113,10 +122,11 @@ export default function Sidebar({ sections, isOpen, onClose }: SidebarProps) {
                                     <Link
                                         to={`/section/${section.id}`}
                                         onClick={onClose}
-                                        className={`flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors ${isActive(`/section/${section.id}`)
-                                            ? `bg-${section.color} text-white`
-                                            : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                                            }`}
+                                        className={`flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                                            isActive(`/section/${section.id}`)
+                                                ? getActiveSectionClasses(section.color)
+                                                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                                        }`}
                                     >
                                         <span className="mr-3 text-lg">{getSectionIcon(section)}</span>
                                         <div className="flex-1 min-w-0">
