@@ -19,7 +19,6 @@ export default function HomePage({ sections, preferences, onUpdatePreferences }:
     const [stats, setStats] = useState({
         totalArticles: 0,
         sourceFeeds: 0,
-        lastUpdated: '',
     });
 
     useEffect(() => {
@@ -29,37 +28,50 @@ export default function HomePage({ sections, preferences, onUpdatePreferences }:
     const loadInitialData = async () => {
         setLoading(true);
         try {
-            // Load featured articles (AI & Startup news only)
-            const aiArticles = await newsService.getAggregatedNews({
-                category: 'ai',
-                region: 'all',
-                timeRange: 'today'
-            });
+            // Parallelize all API calls for better performance
+            const [aiArticles, startupArticles, ...sectionResults] = await Promise.allSettled([
+                newsService.getAggregatedNews({
+                    category: 'ai',
+                    region: 'all',
+                    timeRange: 'today'
+                }),
+                newsService.getAggregatedNews({
+                    category: 'startup',
+                    region: 'all',
+                    timeRange: 'today'
+                }),
+                // Load all sections in parallel
+                ...sections.map(section => 
+                    newsService.getAggregatedNews({
+                        category: section.category,
+                        region: section.region,
+                        timeRange: 'today'
+                    })
+                )
+            ]);
 
-            const startupArticles = await newsService.getAggregatedNews({
-                category: 'startup',
-                region: 'all',
-                timeRange: 'today'
-            });
+            // Process featured articles
+            const aiData = aiArticles.status === 'fulfilled' ? aiArticles.value : [];
+            const startupData = startupArticles.status === 'fulfilled' ? startupArticles.value : [];
 
             // Combine AI and Startup articles and sort by publishedAt
-            const combinedArticles = [...aiArticles, ...startupArticles]
+            const combinedArticles = [...aiData, ...startupData]
                 .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
                 .slice(0, 6);
 
             setFeaturedArticles(combinedArticles);
 
-            // Load articles for each section
+            // Process section data
             const sectionData: { [key: string]: NewsArticle[] } = {};
-
-            for (const section of sections) {
-                const articles = await newsService.getAggregatedNews({
-                    category: section.category,
-                    region: section.region,
-                    timeRange: 'today'
-                });
-                sectionData[section.id] = articles.slice(0, 3);
-            }
+            sectionResults.forEach((result, index) => {
+                const section = sections[index];
+                if (result.status === 'fulfilled') {
+                    sectionData[section.id] = result.value.slice(0, 3);
+                } else {
+                    sectionData[section.id] = [];
+                    console.warn(`Failed to load articles for ${section.title}:`, result.reason);
+                }
+            });
 
             setSectionArticles(sectionData);
 
@@ -69,16 +81,10 @@ export default function HomePage({ sections, preferences, onUpdatePreferences }:
 
             // Honest metrics - real data only
             const sourceFeeds = 4; // NewsAPI.org, NewsAPI.ai, NewsData.io, RSS feeds
-            const lastUpdated = new Date().toLocaleTimeString('en-US', {
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: false
-            });
 
             setStats({
                 totalArticles,
-                sourceFeeds,
-                lastUpdated
+                sourceFeeds
             });
 
         } catch (error) {
@@ -118,10 +124,6 @@ export default function HomePage({ sections, preferences, onUpdatePreferences }:
                             <div>
                                 <div className="text-lg font-bold">{stats.sourceFeeds}</div>
                                 <div className="text-blue-200 text-xs">News Sources</div>
-                            </div>
-                            <div>
-                                <div className="text-lg font-bold">{stats.lastUpdated}</div>
-                                <div className="text-blue-200 text-xs">Last Updated</div>
                             </div>
                         </div>
                     </div>

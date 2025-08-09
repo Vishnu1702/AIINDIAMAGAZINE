@@ -6,6 +6,10 @@ class NewsService {
     private readonly NEWS_AI_API_KEY = import.meta.env.VITE_NEWS_AI_API_KEY || 'demo';
     private readonly NEWS_DATA_API_KEY = import.meta.env.VITE_NEWS_DATA_API_KEY || 'demo';
 
+    // Simple cache to avoid repeated API calls
+    private cache = new Map<string, { data: NewsArticle[], timestamp: number }>();
+    private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
     private readonly BASE_URLS = {
         newsApi: 'https://newsapi.org/v2',
         newsAi: 'https://eventregistry.org/api/v1',
@@ -154,7 +158,7 @@ class NewsService {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                timeout: 10000, // 10 second timeout
+                timeout: 5000, // 5 second timeout for faster loading
             });
 
             console.log('NewsAPI response status:', response.status);
@@ -196,7 +200,7 @@ class NewsService {
 
             const response = await axios.get(`${this.BASE_URLS.newsApi}/everything`, {
                 params: Object.fromEntries(params),
-                timeout: 10000,
+                timeout: 5000,
             });
 
             return this.transformNewsApiResponse(response.data, filters);
@@ -266,6 +270,17 @@ class NewsService {
     // Aggregate articles from multiple sources
     async getAggregatedNews(filters: NewsFilter): Promise<NewsArticle[]> {
         console.log('getAggregatedNews called with filters:', filters);
+        
+        // Create cache key based on filters
+        const cacheKey = `${filters.category || 'all'}-${filters.region || 'all'}-${filters.timeRange || 'all'}`;
+        
+        // Check cache first
+        const cached = this.cache.get(cacheKey);
+        if (cached && (Date.now() - cached.timestamp) < this.CACHE_DURATION) {
+            console.log('Returning cached data for:', cacheKey);
+            return cached.data;
+        }
+        
         try {
             let allArticles: NewsArticle[] = [];
 
@@ -294,9 +309,17 @@ class NewsService {
             // Remove duplicates and sort by date
             const uniqueArticles = this.removeDuplicates(allArticles);
             console.log('Final unique articles:', uniqueArticles.length);
-            return uniqueArticles.sort((a, b) =>
+            const sortedArticles = uniqueArticles.sort((a, b) =>
                 new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
             );
+            
+            // Cache the results
+            this.cache.set(cacheKey, {
+                data: sortedArticles,
+                timestamp: Date.now()
+            });
+            
+            return sortedArticles;
         } catch (error) {
             console.error('Error aggregating news:', error);
             return []; // Return empty array instead of mock articles
