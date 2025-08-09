@@ -178,8 +178,8 @@ class NewsService {
             } else {
                 console.error('NewsAPI error:', error);
             }
-            // Return mock data if API fails
-            return this.getMockArticles(filters);
+            // Return empty array if API fails
+            return [];
         }
     }
 
@@ -202,7 +202,7 @@ class NewsService {
             return this.transformNewsApiResponse(response.data, filters);
         } catch (error) {
             console.error('Simple NewsAPI query also failed:', error);
-            return this.getMockArticles(filters);
+            return [];
         }
     }
 
@@ -285,12 +285,10 @@ class NewsService {
 
             console.log('Total articles before deduplication:', allArticles.length);
 
-            // If no articles from APIs, return mock data
+            // If no articles from APIs, return empty array instead of mock data
             if (allArticles.length === 0) {
-                console.log('No real articles found, returning mock data');
-                return filters.region === 'india'
-                    ? this.getEnhancedIndianMockData(filters)
-                    : this.getMockArticles(filters);
+                console.log('No real articles found, returning empty array');
+                return [];
             }
 
             // Remove duplicates and sort by date
@@ -301,7 +299,7 @@ class NewsService {
             );
         } catch (error) {
             console.error('Error aggregating news:', error);
-            return this.getMockArticles(filters);
+            return []; // Return empty array instead of mock articles
         }
     }
 
@@ -329,212 +327,12 @@ class NewsService {
                 );
             }
 
-            // For now, return enhanced mock data with actual Indian source names
-            return this.getEnhancedIndianMockData(filters);
+            // For now, return empty array instead of mock data
+            return [];
         } catch (error) {
             console.error('RSS fetch error:', error);
-            return this.getEnhancedIndianMockData(filters);
+            return [];
         }
-    }
-
-    // Enhanced mock data with real Indian sources
-    private getEnhancedIndianMockData(filters: NewsFilter): NewsArticle[] {
-        const indianSources = [
-            { id: 'inc42', name: 'Inc42' },
-            { id: 'yourstory', name: 'YourStory' },
-            { id: 'analytics-india-magazine', name: 'Analytics India Magazine' },
-            { id: 'economic-times', name: 'Economic Times' },
-            { id: 'entrackr', name: 'Entrackr' },
-            { id: 'vccircle', name: 'VCCircle' },
-            { id: 'livemint', name: 'Mint' },
-            { id: 'business-standard', name: 'Business Standard' }
-        ];
-
-        const aiArticles = [
-            {
-                id: 'india-ai-1',
-                title: 'Tata Consultancy Services Launches AI Center of Excellence in Bengaluru',
-                description: 'TCS announces new AI research facility focusing on generative AI and machine learning solutions for enterprises.',
-                content: 'Tata Consultancy Services has inaugurated a new AI Center of Excellence in Bengaluru...',
-                url: '#',
-                urlToImage: this.createPlaceholderImage('TCS AI', '#FF6B35'),
-                publishedAt: new Date(Date.now() - Math.random() * 86400000).toISOString(),
-                source: indianSources[0],
-                author: 'Rishabh Mansur',
-                category: 'ai' as const,
-                region: 'india' as const,
-                tags: ['TCS', 'AI', 'Bengaluru', 'Machine Learning', 'Enterprise AI'],
-                isBookmarked: false,
-                readTime: 4,
-                isMockArticle: true,
-            },
-            {
-                id: 'india-ai-2',
-                title: 'IIT Delhi Researchers Develop AI Model for Indian Language Processing',
-                description: 'New breakthrough in natural language processing specifically designed for Hindi, Tamil, and Bengali.',
-                content: 'Researchers at IIT Delhi have developed an advanced AI model...',
-                url: '#',
-                urlToImage: this.createPlaceholderImage('IIT AI', '#FF6B35'),
-                publishedAt: new Date(Date.now() - Math.random() * 86400000).toISOString(),
-                source: indianSources[2],
-                author: 'Priya Sharma',
-                category: 'ai' as const,
-                region: 'india' as const,
-                tags: ['IIT Delhi', 'NLP', 'Indian Languages', 'Research', 'AI'],
-                isBookmarked: false,
-                readTime: 5,
-            }
-        ];
-
-        const startupArticles = [
-            {
-                id: 'india-startup-1',
-                title: 'PhonePe Raises $850M in Latest Funding Round, Valuation Hits $12B',
-                description: 'Walmart-backed fintech unicorn PhonePe secures major funding for expansion across Southeast Asia.',
-                content: 'PhonePe, India\'s leading digital payments platform, has raised $850 million...',
-                url: '#',
-                urlToImage: this.createPlaceholderImage('PhonePe', '#FF6B35'),
-                publishedAt: new Date(Date.now() - Math.random() * 86400000).toISOString(),
-                source: indianSources[1],
-                author: 'Sindhu Hariharan',
-                category: 'startup' as const,
-                region: 'india' as const,
-                tags: ['PhonePe', 'Fintech', 'Funding', 'Unicorn', 'Digital Payments'],
-                isBookmarked: false,
-                readTime: 3,
-            },
-            {
-                id: 'india-startup-2',
-                title: 'Byju\'s Restructuring: Ed-tech Giant Plans Major Pivot Strategy',
-                description: 'Former unicorn Byju\'s announces comprehensive restructuring plan focusing on sustainable growth.',
-                content: 'Byju\'s, once India\'s most valuable startup, is implementing a major restructuring...',
-                url: '#',
-                urlToImage: this.createPlaceholderImage('Byjus', '#FF6B35'),
-                publishedAt: new Date(Date.now() - Math.random() * 86400000).toISOString(),
-                source: indianSources[4],
-                author: 'Harsh Upadhyay',
-                category: 'startup' as const,
-                region: 'india' as const,
-                tags: ['Byju\'s', 'EdTech', 'Restructuring', 'Unicorn', 'Education'],
-                isBookmarked: false,
-                readTime: 6,
-            }
-        ];
-
-        if (filters.category === 'ai') return aiArticles;
-        if (filters.category === 'startup') return startupArticles;
-        return [...aiArticles, ...startupArticles];
-    }
-
-    private getMockArticles(filters: NewsFilter): NewsArticle[] {
-        const mockArticles: NewsArticle[] = [
-            {
-                id: '1',
-                title: 'OpenAI Announces Major Breakthrough in AI Language Models',
-                description: 'The company reveals significant improvements in natural language processing capabilities with their latest model update.',
-                content: 'OpenAI has announced a major breakthrough in artificial intelligence...',
-                url: '#',
-                urlToImage: this.createPlaceholderImage('AI News', '#0066CC'),
-                publishedAt: '2025-08-08T10:30:00Z',
-                source: { id: 'techcrunch', name: 'TechCrunch' },
-                author: 'Sarah Johnson',
-                category: 'ai' as const,
-                region: 'world' as const,
-                tags: ['AI', 'OpenAI', 'machine learning', 'breakthrough'],
-                readTime: 5,
-                isMockArticle: true,
-            },
-            {
-                id: '2',
-                title: 'Indian Startup Zerodha Expands AI-Powered Trading Platform',
-                description: 'The fintech unicorn introduces advanced AI algorithms to help retail investors make better trading decisions.',
-                content: 'Zerodha, India\'s largest retail stockbroker, has launched new AI-powered features...',
-                url: '#',
-                urlToImage: this.createPlaceholderImage('India AI', '#FF6B35'),
-                publishedAt: '2025-08-08T08:15:00Z',
-                source: { id: 'economic-times', name: 'Economic Times' },
-                author: 'Raj Patel',
-                category: 'ai' as const,
-                region: 'india' as const,
-                tags: ['Zerodha', 'fintech', 'AI trading', 'India'],
-                readTime: 4,
-                isMockArticle: true,
-            },
-            {
-                id: '3',
-                title: 'Global Venture Capital Funding Surges in Q3 2025',
-                description: 'VC investments reach record highs with AI and climate tech startups leading the charge.',
-                content: 'Venture capital funding has reached unprecedented levels this quarter...',
-                url: '#',
-                urlToImage: this.createPlaceholderImage('Startup News', '#00CC66'),
-                publishedAt: '2025-08-08T06:45:00Z',
-                source: { id: 'crunchbase', name: 'Crunchbase News' },
-                author: 'Michael Chen',
-                category: 'startup' as const,
-                region: 'world' as const,
-                tags: ['venture capital', 'funding', 'Q3 2025', 'climate tech'],
-                readTime: 6,
-                isMockArticle: true,
-            },
-            {
-                id: '4',
-                title: 'Bengaluru-Based HealthTech Startup Raises $50M Series B',
-                description: 'The AI-powered healthcare platform plans to expand across Southeast Asia with the new funding.',
-                content: 'A Bengaluru-based healthtech startup has successfully raised $50 million...',
-                url: '#',
-                urlToImage: this.createPlaceholderImage('India Startup', '#FF6B35'),
-                publishedAt: '2025-08-08T05:20:00Z',
-                source: { id: 'yourstory', name: 'YourStory' },
-                author: 'Priya Sharma',
-                category: 'startup' as const,
-                region: 'india' as const,
-                tags: ['healthtech', 'Series B', 'Bengaluru', 'AI healthcare'],
-                readTime: 3,
-            },
-            {
-                id: '5',
-                title: 'Meta Unveils Next-Generation VR Headset with AI Integration',
-                description: 'The new device promises breakthrough immersive experiences powered by advanced AI processing.',
-                content: 'Meta has revealed its latest virtual reality headset featuring cutting-edge AI capabilities...',
-                url: '#',
-                urlToImage: this.createPlaceholderImage('VR AI', '#0066CC'),
-                publishedAt: '2025-08-08T04:10:00Z',
-                source: { id: 'the-verge', name: 'The Verge' },
-                author: 'Alex Thompson',
-                category: 'ai' as const,
-                region: 'world' as const,
-                tags: ['Meta', 'VR', 'AI integration', 'headset'],
-                readTime: 7,
-            },
-            {
-                id: '6',
-                title: 'Indian Govt Launches $2B AI Innovation Fund',
-                description: 'New initiative aims to boost AI research and development across Indian universities and startups.',
-                content: 'The Indian government has announced a major $2 billion fund dedicated to AI innovation...',
-                url: '#',
-                urlToImage: this.createPlaceholderImage('India AI Fund', '#FF6B35'),
-                publishedAt: '2025-08-08T03:30:00Z',
-                source: { id: 'livemint', name: 'LiveMint' },
-                author: 'Ankit Verma',
-                category: 'ai' as const,
-                region: 'india' as const,
-                tags: ['government', 'AI fund', 'innovation', 'research'],
-                readTime: 5,
-            }
-        ];
-
-        // Filter mock articles based on filters
-        let filtered = mockArticles;
-
-        if (filters.category && filters.category !== 'all') {
-            filtered = filtered.filter(article => article.category === filters.category);
-        }
-
-        if (filters.region && filters.region !== 'all') {
-            filtered = filtered.filter(article => article.region === filters.region);
-        }
-
-        return filtered;
     }
 
     private transformNewsApiResponse(data: any, filters: NewsFilter): NewsArticle[] {
