@@ -1,7 +1,6 @@
-import { VercelRequest, VercelResponse } from '@vercel/node';
-import axios from 'axios';
+const axios = require('axios');
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+module.exports = async function handler(req, res) {
   // Set CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -27,13 +26,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     
     const params = new URLSearchParams({
       apiKey: NEWS_API_KEY,
-      ...(q && { q: q as string }),
-      ...(language && { language: language as string }),
-      ...(sortBy && { sortBy: sortBy as string }),
-      ...(pageSize && { pageSize: pageSize as string }),
-      ...(category && { category: category as string }),
-      ...(country && { country: country as string }),
-      ...(sources && { sources: sources as string })
+      ...(q && { q }),
+      ...(language && { language }),
+      ...(sortBy && { sortBy }),
+      ...(pageSize && { pageSize }),
+      ...(category && { category }),
+      ...(country && { country }),
+      ...(sources && { sources })
     });
 
     // Determine which NewsAPI endpoint to use
@@ -54,11 +53,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   } catch (error) {
     console.error('NewsAPI proxy error:', error);
     
-    if (axios.isAxiosError(error)) {
-      res.status(error.response?.status || 500).json({
+    if (error.response) {
+      res.status(error.response.status || 500).json({
         error: 'NewsAPI request failed',
         message: error.message,
-        details: error.response?.data
+        details: error.response.data
       });
     } else {
       res.status(500).json({
@@ -67,4 +66,4 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
   }
-}
+};
