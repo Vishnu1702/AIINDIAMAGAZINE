@@ -120,14 +120,28 @@ class NewsService {
 
     // Indian news sources RSS feeds
     private readonly INDIAN_RSS_FEEDS = {
+        // Technology & AI focused
         et_tech: 'https://economictimes.indiatimes.com/tech/rssfeeds/13357270.cms',
+        livemint_tech: 'https://www.livemint.com/rss/technology',
+        times_tech: 'https://timesofindia.indiatimes.com/rssfeeds/-2128936835.cms',
+        hindu_sci_tech: 'https://www.thehindu.com/sci-tech/technology/feeder/default.rss',
+        business_standard_tech: 'https://www.business-standard.com/rss/technology-106.rss',
+        analytics_india: 'https://analyticsindiamag.com/feed/',
+        
+        // Startup & Business focused  
         inc42: 'https://inc42.com/feed/',
         yourstory: 'https://yourstory.com/feed',
-        analytics_india: 'https://analyticsindiamag.com/feed/',
-        business_standard: 'https://www.business-standard.com/rss/technology-106.rss',
-        livemint_tech: 'https://www.livemint.com/rss/technology',
         entrackr: 'https://entrackr.com/feed/',
         vccircle: 'https://www.vccircle.com/feed/',
+        livemint_companies: 'https://www.livemint.com/rss/companies',
+        et_startups: 'https://economictimes.indiatimes.com/small-biz/startups/rssfeeds/63319174.cms',
+        medianama: 'https://www.medianama.com/feed/',
+        
+        // General business with tech coverage
+        business_today: 'https://www.businesstoday.in/rss/technology-news',
+        financial_express_tech: 'https://www.financialexpress.com/rss/industry-technology/feed/',
+        news18_tech: 'https://www.news18.com/rss/tech.xml',
+        zee_business_tech: 'https://zeenews.india.com/rss/business.xml'
     };
 
     // NewsAPI.org - General news with country/category filters
@@ -336,15 +350,16 @@ class NewsService {
     // RSS Feed parser for Indian sources
     async getIndianRSSNews(filters: NewsFilter): Promise<NewsArticle[]> {
         try {
-            // Note: RSS parsing in browser requires CORS proxy
-            // For production, implement server-side RSS parsing
             const relevantFeeds: string[] = [];
 
             if (filters.category === 'ai') {
                 relevantFeeds.push(
                     this.INDIAN_RSS_FEEDS.analytics_india,
                     this.INDIAN_RSS_FEEDS.et_tech,
-                    this.INDIAN_RSS_FEEDS.livemint_tech
+                    this.INDIAN_RSS_FEEDS.livemint_tech,
+                    this.INDIAN_RSS_FEEDS.times_tech,
+                    this.INDIAN_RSS_FEEDS.hindu_sci_tech,
+                    this.INDIAN_RSS_FEEDS.business_standard_tech
                 );
             }
 
@@ -353,16 +368,180 @@ class NewsService {
                     this.INDIAN_RSS_FEEDS.inc42,
                     this.INDIAN_RSS_FEEDS.yourstory,
                     this.INDIAN_RSS_FEEDS.entrackr,
-                    this.INDIAN_RSS_FEEDS.vccircle
+                    this.INDIAN_RSS_FEEDS.vccircle,
+                    this.INDIAN_RSS_FEEDS.et_startups,
+                    this.INDIAN_RSS_FEEDS.medianama,
+                    this.INDIAN_RSS_FEEDS.livemint_companies
                 );
             }
 
-            // For now, return empty array instead of mock data
-            return [];
+            console.log(`Fetching ${relevantFeeds.length} Indian RSS feeds for ${filters.category}`);
+
+            // Fetch RSS feeds in parallel with timeout
+            const rssPromises = relevantFeeds.map(feedUrl => 
+                this.fetchRSSFeed(feedUrl, filters)
+            );
+
+            const results = await Promise.allSettled(rssPromises);
+            const allRssArticles: NewsArticle[] = [];
+
+            results.forEach((result, index) => {
+                if (result.status === 'fulfilled' && result.value.length > 0) {
+                    console.log(`RSS feed ${index + 1} returned ${result.value.length} articles`);
+                    allRssArticles.push(...result.value);
+                } else if (result.status === 'rejected') {
+                    console.warn(`RSS feed ${index + 1} failed:`, result.reason);
+                }
+            });
+
+            console.log(`Total RSS articles collected: ${allRssArticles.length}`);
+            return allRssArticles.slice(0, 10); // Limit to 10 articles per category
+
         } catch (error) {
             console.error('RSS fetch error:', error);
             return [];
         }
+    }
+
+    // Fetch and parse individual RSS feed
+    private async fetchRSSFeed(feedUrl: string, filters: NewsFilter): Promise<NewsArticle[]> {
+        try {
+            // Use CORS proxy for RSS feeds
+            const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(feedUrl)}`;
+            
+            const response = await axios.get(proxyUrl, {
+                timeout: 8000, // 8 second timeout for RSS
+                headers: {
+                    'Accept': 'application/json'
+                }
+            });
+
+            if (!response.data?.contents) {
+                throw new Error('No RSS content received');
+            }
+
+            return this.parseRSSContent(response.data.contents, feedUrl, filters);
+        } catch (error) {
+            console.error(`Failed to fetch RSS from ${feedUrl}:`, error);
+            return [];
+        }
+    }
+
+    // Parse RSS XML content
+    private parseRSSContent(xmlContent: string, feedUrl: string, filters: NewsFilter): NewsArticle[] {
+        try {
+            const parser = new DOMParser();
+            const xmlDoc = parser.parseFromString(xmlContent, 'text/xml');
+            
+            // Check for parsing errors
+            const parserError = xmlDoc.querySelector('parsererror');
+            if (parserError) {
+                throw new Error('XML parsing failed');
+            }
+
+            const items = xmlDoc.querySelectorAll('item');
+            const articles: NewsArticle[] = [];
+
+            const sourceName = this.getSourceNameFromUrl(feedUrl);
+
+            for (let i = 0; i < Math.min(items.length, 5); i++) { // Max 5 articles per feed
+                const item = items[i];
+                
+                const title = item.querySelector('title')?.textContent?.trim();
+                const link = item.querySelector('link')?.textContent?.trim();
+                const description = item.querySelector('description')?.textContent?.trim();
+                const pubDate = item.querySelector('pubDate')?.textContent?.trim();
+                const author = item.querySelector('author')?.textContent?.trim() || 
+                             item.querySelector('dc\\:creator')?.textContent?.trim();
+
+                if (!title || !link) continue;
+
+                // Filter relevance for Indian content
+                if (!this.isRelevantIndianArticle(title, description || '', filters.category || 'ai')) {
+                    continue;
+                }
+
+                const cleanDescription = this.cleanHtmlTags(description || '');
+                const publishedAt = pubDate ? new Date(pubDate).toISOString() : new Date().toISOString();
+
+                articles.push({
+                    id: this.generateId(link),
+                    title: this.cleanHtmlTags(title),
+                    description: cleanDescription.substring(0, 200) + (cleanDescription.length > 200 ? '...' : ''),
+                    content: cleanDescription,
+                    url: link,
+                    urlToImage: this.getValidImageUrl(null, title, filters.category || 'ai'),
+                    publishedAt,
+                    source: {
+                        id: sourceName.toLowerCase().replace(/\s+/g, '-'),
+                        name: sourceName
+                    },
+                    author: author || 'Unknown Author',
+                    category: (filters.category === 'ai' || filters.category === 'startup') ? filters.category : 'ai',
+                    region: 'india',
+                    tags: this.extractTags(title + ' ' + cleanDescription),
+                    readTime: this.calculateReadTime(cleanDescription),
+                    isMockArticle: false
+                });
+            }
+
+            return articles;
+        } catch (error) {
+            console.error('RSS parsing error:', error);
+            return [];
+        }
+    }
+
+    // Get source name from RSS feed URL
+    private getSourceNameFromUrl(feedUrl: string): string {
+        if (feedUrl.includes('economictimes')) return 'Economic Times';
+        if (feedUrl.includes('livemint')) return 'LiveMint';
+        if (feedUrl.includes('timesofindia')) return 'Times of India';
+        if (feedUrl.includes('thehindu')) return 'The Hindu';
+        if (feedUrl.includes('business-standard')) return 'Business Standard';
+        if (feedUrl.includes('analyticsindiamag')) return 'Analytics India Magazine';
+        if (feedUrl.includes('inc42')) return 'Inc42';
+        if (feedUrl.includes('yourstory')) return 'YourStory';
+        if (feedUrl.includes('entrackr')) return 'Entrackr';
+        if (feedUrl.includes('vccircle')) return 'VCCircle';
+        if (feedUrl.includes('medianama')) return 'MediaNama';
+        if (feedUrl.includes('businesstoday')) return 'Business Today';
+        if (feedUrl.includes('financialexpress')) return 'Financial Express';
+        if (feedUrl.includes('news18')) return 'News18';
+        if (feedUrl.includes('zeenews')) return 'Zee Business';
+        return 'Indian Source';
+    }
+
+    // Clean HTML tags from content
+    private cleanHtmlTags(text: string): string {
+        return text.replace(/<[^>]*>/g, '').replace(/&[^;]+;/g, ' ').trim();
+    }
+
+    // Check if article is relevant for Indian AI/Startup categories
+    private isRelevantIndianArticle(title: string, description: string, category: string): boolean {
+        const content = `${title} ${description}`.toLowerCase();
+
+        if (category === 'ai') {
+            const aiKeywords = [
+                'artificial intelligence', 'ai', 'machine learning', 'ml', 'deep learning',
+                'neural network', 'chatgpt', 'openai', 'generative ai', 'automation',
+                'robotics', 'algorithm', 'data science', 'analytics', 'tech', 'technology',
+                'digital', 'innovation', 'software', 'platform', 'cloud', 'api'
+            ];
+            return aiKeywords.some(keyword => content.includes(keyword));
+        }
+
+        if (category === 'startup') {
+            const startupKeywords = [
+                'startup', 'funding', 'investment', 'venture', 'series', 'seed',
+                'unicorn', 'valuation', 'ipo', 'acquisition', 'entrepreneur', 'founder',
+                'fintech', 'saas', 'business', 'company', 'firm', 'raise', 'capital',
+                'growth', 'expansion', 'launch', 'partnership'
+            ];
+            return startupKeywords.some(keyword => content.includes(keyword));
+        }
+
+        return true;
     }
 
     private transformNewsApiResponse(data: any, filters: NewsFilter): NewsArticle[] {
