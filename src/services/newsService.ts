@@ -10,6 +10,12 @@ class NewsService {
     private cache = new Map<string, { data: NewsArticle[], timestamp: number }>();
     private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
+    // Method to clear cache when query logic changes
+    public clearCache(): void {
+        this.cache.clear();
+        console.log('News cache cleared');
+    }
+
     private readonly BASE_URLS = {
         newsApi: 'https://newsapi.org/v2',
         newsAi: 'https://eventregistry.org/api/v1',
@@ -134,12 +140,13 @@ class NewsService {
                 pageSize: '20',
             });
 
-            // Build simpler query to avoid 400 errors
+            // Build more specific queries to avoid irrelevant matches
             let query = '';
             if (filters.category === 'ai') {
-                query = 'artificial intelligence OR AI OR "machine learning"';
+                // More specific AI query to avoid false positives like sports articles
+                query = '"artificial intelligence" OR "machine learning" OR "deep learning" OR "neural network" OR "AI technology" OR "AI model" OR "generative AI" OR "ChatGPT" OR "OpenAI"';
             } else if (filters.category === 'startup') {
-                query = 'startup OR "venture capital" OR funding';
+                query = 'startup OR "venture capital" OR "series A" OR "series B" OR "series C" OR funding OR "seed round" OR unicorn';
             } else {
                 query = 'technology';
             }
@@ -195,7 +202,7 @@ class NewsService {
                 language: 'en',
                 sortBy: 'publishedAt',
                 pageSize: '10',
-                q: filters.category === 'ai' ? 'AI' : 'startup',
+                q: filters.category === 'ai' ? '"artificial intelligence"' : 'startup',
             });
 
             const response = await axios.get(`${this.BASE_URLS.newsApi}/everything`, {
@@ -370,25 +377,27 @@ class NewsService {
             return [];
         }
 
-        const transformedArticles = data.articles.map((article: any) => ({
-            id: this.generateId(article.url),
-            title: article.title,
-            description: article.description || '',
-            content: article.content || '',
-            url: article.url,
-            urlToImage: this.getValidImageUrl(article.urlToImage, article.title || '', filters.category || 'ai'),
-            publishedAt: article.publishedAt,
-            source: {
-                id: article.source.id || 'unknown',
-                name: article.source.name || 'Unknown Source',
-            },
-            author: article.author || 'Unknown Author',
-            category: filters.category || 'ai',
-            region: filters.region || 'world',
-            tags: this.extractTags(article.title + ' ' + article.description),
-            readTime: this.calculateReadTime(article.content),
-            isMockArticle: false, // Mark real articles as not mock
-        }));
+        const transformedArticles = data.articles
+            .filter((article: any) => this.isRelevantArticle(article, filters))
+            .map((article: any) => ({
+                id: this.generateId(article.url),
+                title: article.title,
+                description: article.description || '',
+                content: article.content || '',
+                url: article.url,
+                urlToImage: this.getValidImageUrl(article.urlToImage, article.title || '', filters.category || 'ai'),
+                publishedAt: article.publishedAt,
+                source: {
+                    id: article.source.id || 'unknown',
+                    name: article.source.name || 'Unknown Source',
+                },
+                author: article.author || 'Unknown Author',
+                category: filters.category || 'ai',
+                region: filters.region || 'world',
+                tags: this.extractTags(article.title + ' ' + article.description),
+                readTime: this.calculateReadTime(article.content),
+                isMockArticle: false, // Mark real articles as not mock
+            }));
 
         console.log('Transformed articles count:', transformedArticles.length);
         return transformedArticles;
@@ -456,6 +465,83 @@ class NewsService {
         });
 
         return foundTags;
+    }
+
+    // Check if article is relevant to the requested category
+    private isRelevantArticle(article: any, filters: NewsFilter): boolean {
+        if (!article.title && !article.description) return false;
+
+        const content = `${article.title || ''} ${article.description || ''}`.toLowerCase();
+        
+        // Filter out clearly irrelevant domains/sources for AI content
+        const irrelevantDomains = [
+            'onefootball.com',
+            'espn.com',
+            'goal.com',
+            'skysports.com',
+            'marca.com',
+            'espnfc.com',
+            'football365.com',
+            'transfermarkt.com',
+            'premierleague.com',
+            'uefa.com',
+            'fifa.com'
+        ];
+
+        // Check if article is from sports/irrelevant domains
+        if (article.url && irrelevantDomains.some(domain => article.url.includes(domain))) {
+            console.log('Filtering out irrelevant article from sports domain:', article.title);
+            return false;
+        }
+
+        if (filters.category === 'ai') {
+            // AI category - look for specific AI-related terms
+            const aiKeywords = [
+                'artificial intelligence',
+                'machine learning',
+                'deep learning',
+                'neural network',
+                'chatgpt',
+                'openai',
+                'generative ai',
+                'ai model',
+                'ai technology',
+                'automation',
+                'robotics',
+                'algorithm'
+            ];
+
+            // Must contain at least one specific AI keyword
+            const hasAiKeyword = aiKeywords.some(keyword => 
+                content.includes(keyword) || content.includes(keyword.replace(' ', '-'))
+            );
+
+            // Exclude sports-related content even if it mentions AI
+            const sportsKeywords = [
+                'football', 'soccer', 'madrid', 'barcelona', 'premier league', 
+                'champions league', 'fifa', 'uefa', 'goal', 'kit', 'jersey',
+                'match', 'game', 'score', 'player', 'team', 'stadium'
+            ];
+
+            const isSports = sportsKeywords.some(keyword => content.includes(keyword));
+
+            return hasAiKeyword && !isSports;
+        }
+
+        if (filters.category === 'startup') {
+            // Startup category - look for business/funding related terms
+            const startupKeywords = [
+                'startup', 'venture capital', 'funding', 'investment',
+                'series a', 'series b', 'series c', 'seed round',
+                'unicorn', 'valuation', 'ipo', 'acquisition',
+                'entrepreneur', 'founder', 'fintech', 'saas'
+            ];
+
+            return startupKeywords.some(keyword => content.includes(keyword));
+        }
+
+        // For other categories, allow all articles
+        return true;
     }
 
     private calculateReadTime(content: string): number {
