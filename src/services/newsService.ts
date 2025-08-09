@@ -16,8 +16,20 @@ class NewsService {
         console.log('News cache cleared');
     }
 
+    // Detect if running locally or in production
+    private getNewsApiUrl(): string {
+        const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        
+        if (isLocalhost) {
+            // Local development - use NewsAPI directly
+            return 'https://newsapi.org/v2';
+        } else {
+            // Production - use our serverless proxy
+            return '/api/news';
+        }
+    }
+
     private readonly BASE_URLS = {
-        newsApi: 'https://newsapi.org/v2',
         newsAi: 'https://eventregistry.org/api/v1',
         newsData: 'https://newsdata.io/api/1',
     };
@@ -204,12 +216,19 @@ class NewsService {
     // NewsAPI.org - General news with country/category filters
     async getNewsApiArticles(filters: NewsFilter): Promise<NewsArticle[]> {
         try {
+            const baseUrl = this.getNewsApiUrl();
+            const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+            
             const params = new URLSearchParams({
-                apiKey: this.NEWS_API_KEY,
                 language: 'en',
                 sortBy: 'publishedAt',
                 pageSize: '30', // Increased from 20 to get more articles
             });
+
+            // Add API key only for localhost (direct NewsAPI calls)
+            if (isLocalhost) {
+                params.append('apiKey', this.NEWS_API_KEY);
+            }
 
             // Build more specific queries to avoid irrelevant matches
             let query = '';
@@ -235,9 +254,18 @@ class NewsService {
 
             params.append('q', query);
 
-            console.log('Fetching news with URL:', `${this.BASE_URLS.newsApi}/everything?${params.toString()}`);
+            let apiUrl;
+            if (isLocalhost) {
+                // Local development - call NewsAPI directly
+                apiUrl = `${baseUrl}/everything`;
+                console.log('Fetching news directly from NewsAPI (localhost):', `${apiUrl}?${params.toString()}`);
+            } else {
+                // Production - use our serverless proxy
+                apiUrl = baseUrl;
+                console.log('Fetching news via proxy (production):', `${apiUrl}?${params.toString()}`);
+            }
 
-            const response = await axios.get(`${this.BASE_URLS.newsApi}/everything`, {
+            const response = await axios.get(apiUrl, {
                 params: Object.fromEntries(params),
                 headers: {
                     'Content-Type': 'application/json',
@@ -274,15 +302,29 @@ class NewsService {
     // Fallback method with very simple query
     private async getSimpleNewsApiArticles(filters: NewsFilter): Promise<NewsArticle[]> {
         try {
+            const baseUrl = this.getNewsApiUrl();
+            const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+            
             const params = new URLSearchParams({
-                apiKey: this.NEWS_API_KEY,
                 language: 'en',
                 sortBy: 'publishedAt',
                 pageSize: '10',
                 q: filters.category === 'ai' ? '"artificial intelligence"' : 'startup',
             });
 
-            const response = await axios.get(`${this.BASE_URLS.newsApi}/everything`, {
+            // Add API key only for localhost (direct NewsAPI calls)
+            if (isLocalhost) {
+                params.append('apiKey', this.NEWS_API_KEY);
+            }
+
+            let apiUrl;
+            if (isLocalhost) {
+                apiUrl = `${baseUrl}/everything`;
+            } else {
+                apiUrl = baseUrl;
+            }
+
+            const response = await axios.get(apiUrl, {
                 params: Object.fromEntries(params),
                 timeout: 5000,
             });

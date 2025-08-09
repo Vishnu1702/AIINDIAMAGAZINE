@@ -11,6 +11,10 @@ Currently, two official plugins are available:
 
 A modern, responsive Progressive Web App (PWA) focused on AI and Startup news worldwide, with dedicated sections for Indian content.
 
+## ⚠️ Important: NewsAPI CORS Issue Fix
+
+**If you get a 426 CORS error when deploying**, this is because NewsAPI.org's free plan only works from localhost. We've implemented a serverless proxy solution - see [NEWSAPI_CORS_FIX.md](./NEWSAPI_CORS_FIX.md) for details.
+
 ## 🚀 Features
 
 ### News Sections
