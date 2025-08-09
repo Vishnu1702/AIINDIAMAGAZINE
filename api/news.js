@@ -1,4 +1,6 @@
-const axios = require('axios');
+// Use Node.js built-in modules instead of axios
+const https = require('https');
+const { URL } = require('url');
 
 module.exports = async function handler(req, res) {
     // Set CORS headers
@@ -44,42 +46,71 @@ module.exports = async function handler(req, res) {
             endpoint = 'top-headlines';
         }
 
-        console.log('API Request:', `https://newsapi.org/v2/${endpoint}`, params);
+        // Build URL with query parameters
+        const baseUrl = `https://newsapi.org/v2/${endpoint}`;
+        const queryString = new URLSearchParams(params).toString();
+        const fullUrl = `${baseUrl}?${queryString}`;
 
-        const response = await axios.get(`https://newsapi.org/v2/${endpoint}`, {
-            params,
-            headers: {
-                'Content-Type': 'application/json',
-                'User-Agent': 'DesiAIMagazine/1.0'
-            },
-            timeout: 10000
-        });
+        console.log('Making request to:', fullUrl);
 
-        console.log('API Response status:', response.status);
-        res.status(200).json(response.data);
+        // Make HTTP request using Node.js built-in https
+        const data = await makeHttpRequest(fullUrl);
+        
+        console.log('API Response received');
+        res.status(200).json(JSON.parse(data));
         
     } catch (error) {
         console.error('NewsAPI proxy error:', error.message);
-        console.error('Error details:', error.response?.data);
 
-        if (error.response) {
-            // Forward the exact error from NewsAPI
-            res.status(500).json({
-                error: 'NewsAPI request failed',
-                message: error.message,
-                status: error.response.status,
-                details: error.response.data
-            });
-        } else if (error.code === 'ECONNABORTED') {
-            res.status(408).json({
-                error: 'Request timeout',
-                message: 'NewsAPI request timed out'
-            });
-        } else {
-            res.status(500).json({
-                error: 'Internal server error',
-                message: error.message || 'Failed to fetch news'
-            });
-        }
+        res.status(500).json({
+            error: 'NewsAPI request failed',
+            message: error.message || 'Failed to fetch news',
+            timestamp: new Date().toISOString()
+        });
     }
 };
+
+// Helper function to make HTTP requests using Node.js built-in https
+function makeHttpRequest(url) {
+    return new Promise((resolve, reject) => {
+        const urlObj = new URL(url);
+        
+        const options = {
+            hostname: urlObj.hostname,
+            port: urlObj.port || 443,
+            path: urlObj.pathname + urlObj.search,
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'User-Agent': 'DesiAIMagazine/1.0'
+            }
+        };
+
+        const request = https.request(options, (response) => {
+            let data = '';
+
+            response.on('data', (chunk) => {
+                data += chunk;
+            });
+
+            response.on('end', () => {
+                if (response.statusCode === 200) {
+                    resolve(data);
+                } else {
+                    reject(new Error(`HTTP ${response.statusCode}: ${response.statusMessage}`));
+                }
+            });
+        });
+
+        request.on('error', (error) => {
+            reject(error);
+        });
+
+        request.setTimeout(10000, () => {
+            request.destroy();
+            reject(new Error('Request timeout'));
+        });
+
+        request.end();
+    });
+}
