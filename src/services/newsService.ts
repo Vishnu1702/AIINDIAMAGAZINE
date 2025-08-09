@@ -968,7 +968,9 @@ class NewsService {
 
         // For other categories, allow all articles
         return true;
-    } private calculateReadTime(content: string): number {
+    }
+
+    private calculateReadTime(content: string): number {
         const wordsPerMinute = 200;
         const words = content.split(' ').length;
         return Math.ceil(words / wordsPerMinute);
