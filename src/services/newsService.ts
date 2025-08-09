@@ -414,23 +414,118 @@ class NewsService {
         // Try RSS-to-JSON service as fallback
         try {
             console.log(`Trying RSS-to-JSON fallback for: ${feedUrl}`);
-            const rssToJsonUrl = `https://rss2json.com/api.json?rss_url=${encodeURIComponent(feedUrl)}`;
-            
-            const response = await axios.get(rssToJsonUrl, {
-                timeout: 6000,
-                headers: {
-                    'Accept': 'application/json'
-                }
-            });
-
-            if (response.data?.status === 'ok' && response.data.items) {
-                return this.parseRSSJsonResponse(response.data, feedUrl, filters);
+            articles = await this.tryRSSToJson(feedUrl, filters);
+            if (articles.length > 0) {
+                return articles;
             }
         } catch (error) {
             console.log('RSS-to-JSON fallback failed:', error instanceof Error ? error.message : error);
         }
 
+        // Try alternative RSS-to-JSON services
+        const rssToJsonServices = [
+            `https://rss-to-json-serverless-api.vercel.app/api?feedURL=${encodeURIComponent(feedUrl)}`,
+            `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feedUrl)}`,
+            `https://feed2json.org/convert?url=${encodeURIComponent(feedUrl)}`
+        ];
+
+        for (const serviceUrl of rssToJsonServices) {
+            try {
+                console.log(`Trying alternative RSS-to-JSON service: ${serviceUrl.split('?')[0]}`);
+                const response = await axios.get(serviceUrl, {
+                    timeout: 5000,
+                    headers: {
+                        'Accept': 'application/json',
+                        'User-Agent': 'Mozilla/5.0 (compatible; NewsAggregator/1.0)'
+                    }
+                });
+
+                if (response.data) {
+                    articles = this.parseAlternativeRSSJson(response.data, feedUrl, filters);
+                    if (articles.length > 0) {
+                        console.log(`Success with alternative service: ${articles.length} articles`);
+                        return articles;
+                    }
+                }
+            } catch (error) {
+                console.log(`Alternative RSS service failed: ${error instanceof Error ? error.message : error}`);
+                continue;
+            }
+        }
+
         return [];
+    }
+
+    // Try primary RSS-to-JSON service
+    private async tryRSSToJson(feedUrl: string, filters: NewsFilter): Promise<NewsArticle[]> {
+        const rssToJsonUrl = `https://rss2json.com/api.json?rss_url=${encodeURIComponent(feedUrl)}`;
+        
+        const response = await axios.get(rssToJsonUrl, {
+            timeout: 5000,
+            headers: {
+                'Accept': 'application/json',
+                'User-Agent': 'Mozilla/5.0 (compatible; NewsAggregator/1.0)'
+            }
+        });
+
+        if (response.data?.status === 'ok' && response.data.items) {
+            return this.parseRSSJsonResponse(response.data, feedUrl, filters);
+        }
+        
+        throw new Error('Invalid RSS-to-JSON response');
+    }
+
+    // Parse alternative RSS-to-JSON service responses
+    private parseAlternativeRSSJson(data: any, feedUrl: string, filters: NewsFilter): NewsArticle[] {
+        const articles: NewsArticle[] = [];
+        const sourceName = this.getSourceNameFromUrl(feedUrl);
+        
+        // Different services have different response formats
+        let items = data.items || data.entries || data.feed?.entries || [];
+        
+        console.log(`Processing ${items.length} items from alternative RSS service for ${sourceName}`);
+
+        for (let i = 0; i < Math.min(items.length, 5); i++) {
+            const item = items[i];
+            
+            const title = item.title?.trim() || item.name?.trim();
+            const link = item.link || item.url || item.guid || item.id;
+            const description = item.description || item.content || item.summary || item.contentSnippet;
+            const pubDate = item.pubDate || item.published || item.date || item.isoDate;
+            const author = item.author || item.creator || item['dc:creator'];
+
+            if (!title || !link) continue;
+
+            // Filter relevance for Indian content
+            if (!this.isRelevantIndianArticle(title, description || '', filters.category || 'ai')) {
+                continue;
+            }
+
+            const cleanDescription = this.cleanHtmlTags(description || '');
+            const publishedAt = this.parseDate(pubDate);
+
+            articles.push({
+                id: this.generateId(link),
+                title: this.cleanHtmlTags(title),
+                description: cleanDescription.substring(0, 200) + (cleanDescription.length > 200 ? '...' : ''),
+                content: cleanDescription,
+                url: link,
+                urlToImage: this.getValidImageUrl(item.thumbnail || item.image || item.enclosure?.url, title, filters.category || 'ai'),
+                publishedAt,
+                source: {
+                    id: sourceName.toLowerCase().replace(/\s+/g, '-'),
+                    name: sourceName
+                },
+                author: author || 'Unknown Author',
+                category: (filters.category === 'ai' || filters.category === 'startup') ? filters.category : 'ai',
+                region: 'india',
+                tags: this.extractTags(title + ' ' + cleanDescription),
+                readTime: this.calculateReadTime(cleanDescription),
+                isMockArticle: false
+            });
+        }
+
+        return articles;
     }
 
     // Parse RSS JSON response from rss2json service
@@ -490,11 +585,13 @@ class NewsService {
         try {
             console.log(`Attempting to fetch RSS feed: ${feedUrl}`);
             
-            // Try multiple CORS proxies
+            // Try multiple CORS proxies - updated with working proxies
             const proxies = [
                 `https://api.allorigins.win/get?url=${encodeURIComponent(feedUrl)}`,
+                `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(feedUrl)}`,
                 `https://corsproxy.io/?${encodeURIComponent(feedUrl)}`,
-                `https://cors-anywhere.herokuapp.com/${feedUrl}`
+                `https://proxy.cors.sh/${feedUrl}`,
+                `https://cors-proxy.htmldriven.com/?url=${encodeURIComponent(feedUrl)}`
             ];
 
             for (let i = 0; i < proxies.length; i++) {
@@ -503,9 +600,10 @@ class NewsService {
                     console.log(`Trying proxy ${i + 1}: ${proxyUrl.split('?')[0]}`);
                     
                     const response = await axios.get(proxyUrl, {
-                        timeout: 8000, // 8 second timeout for RSS
+                        timeout: 6000, // Reduced to 6 seconds for faster fallback
                         headers: {
-                            'Accept': 'application/json, application/xml, text/xml, */*'
+                            'Accept': 'application/json, application/xml, text/xml, */*',
+                            'User-Agent': 'Mozilla/5.0 (compatible; NewsAggregator/1.0)'
                         }
                     });
 
@@ -515,11 +613,18 @@ class NewsService {
                     if (response.data?.contents) {
                         // allorigins.win format
                         content = response.data.contents;
+                    } else if (response.data?.body) {
+                        // Some proxies use 'body' field
+                        content = response.data.body;
+                    } else if (response.data?.data) {
+                        // Some proxies use 'data' field
+                        content = response.data.data;
                     } else if (typeof response.data === 'string') {
                         // Direct content or other proxy formats
                         content = response.data;
                     } else {
                         console.log(`Unexpected response format from proxy ${i + 1}:`, typeof response.data);
+                        console.log('Response keys:', Object.keys(response.data || {}));
                         continue;
                     }
 
