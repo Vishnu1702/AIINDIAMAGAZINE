@@ -31,7 +31,7 @@ class NewsService {
         // Create a contextual placeholder based on article content
         const placeholderText = this.getPlaceholderText(title, category);
         const placeholderColor = this.getPlaceholderColor(category);
-        
+
         return this.createPlaceholderImage(placeholderText, placeholderColor);
     }
 
@@ -39,32 +39,32 @@ class NewsService {
     private isValidImageUrl(url: string): boolean {
         if (!url || url.trim() === '') return false;
         if (url === 'null' || url === 'undefined') return false;
-        
+
         // Check for common image extensions
         const imageExtensions = /\.(jpg|jpeg|png|gif|webp|svg)(\?.*)?$/i;
         const hasImageExtension = imageExtensions.test(url);
-        
+
         // Check for common image hosting patterns
         const imageHostPatterns = /(images?|media|cdn|static|assets|img)/i;
         const hasImageHost = imageHostPatterns.test(url);
-        
+
         return hasImageExtension || hasImageHost || url.startsWith('data:image/');
     }
 
     // Generate contextual placeholder text
     private getPlaceholderText(title: string = '', category: string): string {
         const words = title.toLowerCase();
-        
+
         // AI-related keywords
         if (words.includes('ai') || words.includes('artificial') || words.includes('machine learning') || words.includes('ml')) {
             return 'AI News';
         }
-        
+
         // Startup-related keywords  
         if (words.includes('startup') || words.includes('funding') || words.includes('unicorn') || words.includes('venture')) {
             return 'Startup';
         }
-        
+
         // Company-specific
         if (words.includes('google') || words.includes('alphabet')) return 'Google';
         if (words.includes('microsoft')) return 'Microsoft';
@@ -77,7 +77,7 @@ class NewsService {
         if (words.includes('tcs')) return 'TCS';
         if (words.includes('infosys')) return 'Infosys';
         if (words.includes('wipro')) return 'Wipro';
-        
+
         // Indian companies
         if (words.includes('reliance')) return 'Reliance';
         if (words.includes('flipkart')) return 'Flipkart';
@@ -85,17 +85,17 @@ class NewsService {
         if (words.includes('byju')) return 'BYJU\'S';
         if (words.includes('zomato')) return 'Zomato';
         if (words.includes('swiggy')) return 'Swiggy';
-        
+
         // Technology categories
         if (words.includes('robot') || words.includes('automation')) return 'Robotics';
         if (words.includes('crypto') || words.includes('bitcoin') || words.includes('blockchain')) return 'Crypto';
         if (words.includes('cloud')) return 'Cloud';
         if (words.includes('mobile') || words.includes('app')) return 'Mobile';
-        
+
         // Default based on category
         if (category === 'ai') return 'AI News';
         if (category === 'startup') return 'Startup';
-        
+
         return 'Tech News';
     }
 
@@ -346,7 +346,7 @@ class NewsService {
                 title: 'Tata Consultancy Services Launches AI Center of Excellence in Bengaluru',
                 description: 'TCS announces new AI research facility focusing on generative AI and machine learning solutions for enterprises.',
                 content: 'Tata Consultancy Services has inaugurated a new AI Center of Excellence in Bengaluru...',
-                url: 'https://inc42.com/buzz/tcs-ai-center-bengaluru/',
+                url: '#',
                 urlToImage: this.createPlaceholderImage('TCS AI', '#FF6B35'),
                 publishedAt: new Date(Date.now() - Math.random() * 86400000).toISOString(),
                 source: indianSources[0],
@@ -356,13 +356,14 @@ class NewsService {
                 tags: ['TCS', 'AI', 'Bengaluru', 'Machine Learning', 'Enterprise AI'],
                 isBookmarked: false,
                 readTime: 4,
+                isMockArticle: true,
             },
             {
                 id: 'india-ai-2',
                 title: 'IIT Delhi Researchers Develop AI Model for Indian Language Processing',
                 description: 'New breakthrough in natural language processing specifically designed for Hindi, Tamil, and Bengali.',
                 content: 'Researchers at IIT Delhi have developed an advanced AI model...',
-                url: 'https://analyticsindiamag.com/iit-delhi-indian-language-ai/',
+                url: '#',
                 urlToImage: this.createPlaceholderImage('IIT AI', '#FF6B35'),
                 publishedAt: new Date(Date.now() - Math.random() * 86400000).toISOString(),
                 source: indianSources[2],
@@ -381,7 +382,7 @@ class NewsService {
                 title: 'PhonePe Raises $850M in Latest Funding Round, Valuation Hits $12B',
                 description: 'Walmart-backed fintech unicorn PhonePe secures major funding for expansion across Southeast Asia.',
                 content: 'PhonePe, India\'s leading digital payments platform, has raised $850 million...',
-                url: 'https://yourstory.com/2024/03/phonepe-funding-850-million/',
+                url: '#',
                 urlToImage: this.createPlaceholderImage('PhonePe', '#FF6B35'),
                 publishedAt: new Date(Date.now() - Math.random() * 86400000).toISOString(),
                 source: indianSources[1],
@@ -397,7 +398,7 @@ class NewsService {
                 title: 'Byju\'s Restructuring: Ed-tech Giant Plans Major Pivot Strategy',
                 description: 'Former unicorn Byju\'s announces comprehensive restructuring plan focusing on sustainable growth.',
                 content: 'Byju\'s, once India\'s most valuable startup, is implementing a major restructuring...',
-                url: 'https://entrackr.com/2024/03/byjus-restructuring-plan/',
+                url: '#',
                 urlToImage: this.createPlaceholderImage('Byjus', '#FF6B35'),
                 publishedAt: new Date(Date.now() - Math.random() * 86400000).toISOString(),
                 source: indianSources[4],
@@ -422,7 +423,7 @@ class NewsService {
                 title: 'OpenAI Announces Major Breakthrough in AI Language Models',
                 description: 'The company reveals significant improvements in natural language processing capabilities with their latest model update.',
                 content: 'OpenAI has announced a major breakthrough in artificial intelligence...',
-                url: 'https://example.com/openai-breakthrough',
+                url: '#',
                 urlToImage: this.createPlaceholderImage('AI News', '#0066CC'),
                 publishedAt: '2025-08-08T10:30:00Z',
                 source: { id: 'techcrunch', name: 'TechCrunch' },
@@ -431,13 +432,14 @@ class NewsService {
                 region: 'world' as const,
                 tags: ['AI', 'OpenAI', 'machine learning', 'breakthrough'],
                 readTime: 5,
+                isMockArticle: true,
             },
             {
                 id: '2',
                 title: 'Indian Startup Zerodha Expands AI-Powered Trading Platform',
                 description: 'The fintech unicorn introduces advanced AI algorithms to help retail investors make better trading decisions.',
                 content: 'Zerodha, India\'s largest retail stockbroker, has launched new AI-powered features...',
-                url: 'https://example.com/zerodha-ai',
+                url: '#',
                 urlToImage: this.createPlaceholderImage('India AI', '#FF6B35'),
                 publishedAt: '2025-08-08T08:15:00Z',
                 source: { id: 'economic-times', name: 'Economic Times' },
@@ -446,13 +448,14 @@ class NewsService {
                 region: 'india' as const,
                 tags: ['Zerodha', 'fintech', 'AI trading', 'India'],
                 readTime: 4,
+                isMockArticle: true,
             },
             {
                 id: '3',
                 title: 'Global Venture Capital Funding Surges in Q3 2025',
                 description: 'VC investments reach record highs with AI and climate tech startups leading the charge.',
                 content: 'Venture capital funding has reached unprecedented levels this quarter...',
-                url: 'https://example.com/vc-funding-q3',
+                url: '#',
                 urlToImage: this.createPlaceholderImage('Startup News', '#00CC66'),
                 publishedAt: '2025-08-08T06:45:00Z',
                 source: { id: 'crunchbase', name: 'Crunchbase News' },
@@ -461,13 +464,14 @@ class NewsService {
                 region: 'world' as const,
                 tags: ['venture capital', 'funding', 'Q3 2025', 'climate tech'],
                 readTime: 6,
+                isMockArticle: true,
             },
             {
                 id: '4',
                 title: 'Bengaluru-Based HealthTech Startup Raises $50M Series B',
                 description: 'The AI-powered healthcare platform plans to expand across Southeast Asia with the new funding.',
                 content: 'A Bengaluru-based healthtech startup has successfully raised $50 million...',
-                url: 'https://example.com/healthtech-funding',
+                url: '#',
                 urlToImage: this.createPlaceholderImage('India Startup', '#FF6B35'),
                 publishedAt: '2025-08-08T05:20:00Z',
                 source: { id: 'yourstory', name: 'YourStory' },
@@ -482,7 +486,7 @@ class NewsService {
                 title: 'Meta Unveils Next-Generation VR Headset with AI Integration',
                 description: 'The new device promises breakthrough immersive experiences powered by advanced AI processing.',
                 content: 'Meta has revealed its latest virtual reality headset featuring cutting-edge AI capabilities...',
-                url: 'https://example.com/meta-vr-ai',
+                url: '#',
                 urlToImage: this.createPlaceholderImage('VR AI', '#0066CC'),
                 publishedAt: '2025-08-08T04:10:00Z',
                 source: { id: 'the-verge', name: 'The Verge' },
@@ -497,7 +501,7 @@ class NewsService {
                 title: 'Indian Govt Launches $2B AI Innovation Fund',
                 description: 'New initiative aims to boost AI research and development across Indian universities and startups.',
                 content: 'The Indian government has announced a major $2 billion fund dedicated to AI innovation...',
-                url: 'https://example.com/india-ai-fund',
+                url: '#',
                 urlToImage: this.createPlaceholderImage('India AI Fund', '#FF6B35'),
                 publishedAt: '2025-08-08T03:30:00Z',
                 source: { id: 'livemint', name: 'LiveMint' },

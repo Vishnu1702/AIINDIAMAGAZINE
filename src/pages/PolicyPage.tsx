@@ -99,7 +99,7 @@ export default function PolicyPage() {
                             <li>• Offer bookmarking and sharing features for user convenience</li>
                         </ul>
                     </div>
-                    
+
                     <div className="bg-red-50 dark:bg-red-900/20 p-6 rounded-lg border border-red-200 dark:border-red-800">
                         <h3 className="text-lg font-semibold text-red-800 dark:text-red-300 mb-3">❌ What We Don't Do</h3>
                         <ul className="text-red-700 dark:text-red-400 space-y-2">
@@ -175,8 +175,8 @@ export default function PolicyPage() {
                 <div className="bg-white dark:bg-gray-600 p-4 rounded-lg">
                     <div className="flex items-center">
                         <ExternalLink className="mr-3 text-ai-blue" size={20} />
-                        <a 
-                            href="mailto:balivishnu.cs@gmail.com" 
+                        <a
+                            href="mailto:balivishnu.cs@gmail.com"
                             className="text-ai-blue hover:text-ai-blue/80 font-medium transition-colors"
                         >
                             balivishnu.cs@gmail.com

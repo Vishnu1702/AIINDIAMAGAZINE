@@ -69,10 +69,10 @@ export default function HomePage({ sections, preferences, onUpdatePreferences }:
 
             // Honest metrics - real data only
             const sourceFeeds = 4; // NewsAPI.org, NewsAPI.ai, NewsData.io, RSS feeds
-            const lastUpdated = new Date().toLocaleTimeString('en-US', { 
-                hour: '2-digit', 
+            const lastUpdated = new Date().toLocaleTimeString('en-US', {
+                hour: '2-digit',
                 minute: '2-digit',
-                hour12: false 
+                hour12: false
             });
 
             setStats({

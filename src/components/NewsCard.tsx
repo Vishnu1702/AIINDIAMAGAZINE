@@ -106,8 +106,18 @@ export default function NewsCard({ article, compact = false, preferences, onUpda
         return '🌍';
     };
 
+    const handleArticleClick = () => {
+        if (article.isMockArticle || article.url === '#' || !article.url) {
+            // Show a more user-friendly message for mock articles
+            const message = `📰 Sample Article\n\nThis is a demonstration article showing how DesiAIMagazine aggregates news.\n\nReal articles from NewsAPI will have working links to the original sources.`;
+            alert(message);
+            return;
+        }
+        window.open(article.url, '_blank');
+    };
+
     return (
-        <article className="news-card group cursor-pointer overflow-hidden" onClick={() => window.open(article.url, '_blank')}>
+        <article className="news-card group cursor-pointer overflow-hidden" onClick={handleArticleClick}>
             {/* Image */}
             <div className="relative overflow-hidden">
                 {!imageError && article.urlToImage ? (
@@ -127,6 +137,13 @@ export default function NewsCard({ article, compact = false, preferences, onUpda
                 <div className={`absolute top-3 left-3 px-2 py-1 rounded-full text-xs font-medium text-white ${getCategoryColor()}`}>
                     {article.category.toUpperCase()}
                 </div>
+
+                {/* Demo badge for mock articles */}
+                {(article.isMockArticle || article.url === '#') && (
+                    <div className="absolute top-3 right-3 px-2 py-1 rounded-full text-xs font-medium text-white bg-orange-500">
+                        DEMO
+                    </div>
+                )}
 
                 {/* Region indicator */}
                 <div className="absolute top-3 right-3 text-lg">

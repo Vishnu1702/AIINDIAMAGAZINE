@@ -17,6 +17,7 @@ export interface NewsArticle {
     isBookmarked?: boolean;
     readTime?: number;
     biasScore?: number;
+    isMockArticle?: boolean;
 }
 
 export interface NewsSection {

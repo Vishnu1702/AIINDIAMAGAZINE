@@ -121,8 +121,8 @@ export default function AboutPage() {
                     </p>
                     <div className="flex items-center">
                         <Mail className="mr-3 text-ai-blue" size={20} />
-                        <a 
-                            href="mailto:balivishnu.cs@gmail.com" 
+                        <a
+                            href="mailto:balivishnu.cs@gmail.com"
                             className="text-ai-blue hover:text-ai-blue/80 font-medium text-lg transition-colors"
                         >
                             balivishnu.cs@gmail.com

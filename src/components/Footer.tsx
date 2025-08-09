@@ -29,32 +29,32 @@ export default function Footer() {
                         </h4>
                         <ul className="space-y-3">
                             <li>
-                                <Link 
-                                    to="/section/india-ai" 
+                                <Link
+                                    to="/section/india-ai"
                                     className="text-sm text-gray-600 dark:text-gray-400 hover:text-ai-blue dark:hover:text-ai-blue transition-colors"
                                 >
                                     🇮🇳 India AI
                                 </Link>
                             </li>
                             <li>
-                                <Link 
-                                    to="/section/india-startup" 
+                                <Link
+                                    to="/section/india-startup"
                                     className="text-sm text-gray-600 dark:text-gray-400 hover:text-startup-green dark:hover:text-startup-green transition-colors"
                                 >
                                     🚀 India Startup
                                 </Link>
                             </li>
                             <li>
-                                <Link 
-                                    to="/section/world-ai" 
+                                <Link
+                                    to="/section/world-ai"
                                     className="text-sm text-gray-600 dark:text-gray-400 hover:text-ai-blue dark:hover:text-ai-blue transition-colors"
                                 >
                                     🌍 World AI
                                 </Link>
                             </li>
                             <li>
-                                <Link 
-                                    to="/section/world-startup" 
+                                <Link
+                                    to="/section/world-startup"
                                     className="text-sm text-gray-600 dark:text-gray-400 hover:text-startup-green dark:hover:text-startup-green transition-colors"
                                 >
                                     🌐 World Startup
@@ -70,8 +70,8 @@ export default function Footer() {
                         </h4>
                         <ul className="space-y-3">
                             <li>
-                                <Link 
-                                    to="/about" 
+                                <Link
+                                    to="/about"
                                     className="text-sm text-gray-600 dark:text-gray-400 hover:text-ai-blue dark:hover:text-ai-blue transition-colors flex items-center"
                                 >
                                     <Users size={14} className="mr-2" />
@@ -79,8 +79,8 @@ export default function Footer() {
                                 </Link>
                             </li>
                             <li>
-                                <Link 
-                                    to="/policy" 
+                                <Link
+                                    to="/policy"
                                     className="text-sm text-gray-600 dark:text-gray-400 hover:text-ai-blue dark:hover:text-ai-blue transition-colors flex items-center"
                                 >
                                     <Shield size={14} className="mr-2" />
@@ -88,8 +88,8 @@ export default function Footer() {
                                 </Link>
                             </li>
                             <li>
-                                <a 
-                                    href="mailto:balivishnu.cs@gmail.com" 
+                                <a
+                                    href="mailto:balivishnu.cs@gmail.com"
                                     className="text-sm text-gray-600 dark:text-gray-400 hover:text-ai-blue dark:hover:text-ai-blue transition-colors flex items-center"
                                 >
                                     <Mail size={14} className="mr-2" />
