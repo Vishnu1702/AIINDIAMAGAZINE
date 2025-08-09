@@ -379,7 +379,7 @@ class NewsService {
 
             // Fetch RSS feeds in parallel with timeout
             const rssPromises = relevantFeeds.map(feedUrl => 
-                this.fetchRSSFeed(feedUrl, filters)
+                this.fetchRSSFeedWithFallback(feedUrl, filters)
             );
 
             const results = await Promise.allSettled(rssPromises);
@@ -403,26 +403,147 @@ class NewsService {
         }
     }
 
-    // Fetch and parse individual RSS feed
-    private async fetchRSSFeed(feedUrl: string, filters: NewsFilter): Promise<NewsArticle[]> {
+    // Fetch RSS feed with multiple fallback strategies
+    private async fetchRSSFeedWithFallback(feedUrl: string, filters: NewsFilter): Promise<NewsArticle[]> {
+        // Try RSS parsing first
+        let articles = await this.fetchRSSFeed(feedUrl, filters);
+        if (articles.length > 0) {
+            return articles;
+        }
+
+        // Try RSS-to-JSON service as fallback
         try {
-            // Use CORS proxy for RSS feeds
-            const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(feedUrl)}`;
+            console.log(`Trying RSS-to-JSON fallback for: ${feedUrl}`);
+            const rssToJsonUrl = `https://rss2json.com/api.json?rss_url=${encodeURIComponent(feedUrl)}`;
             
-            const response = await axios.get(proxyUrl, {
-                timeout: 8000, // 8 second timeout for RSS
+            const response = await axios.get(rssToJsonUrl, {
+                timeout: 6000,
                 headers: {
                     'Accept': 'application/json'
                 }
             });
 
-            if (!response.data?.contents) {
-                throw new Error('No RSS content received');
+            if (response.data?.status === 'ok' && response.data.items) {
+                return this.parseRSSJsonResponse(response.data, feedUrl, filters);
+            }
+        } catch (error) {
+            console.log('RSS-to-JSON fallback failed:', error instanceof Error ? error.message : error);
+        }
+
+        return [];
+    }
+
+    // Parse RSS JSON response from rss2json service
+    private parseRSSJsonResponse(data: any, feedUrl: string, filters: NewsFilter): NewsArticle[] {
+        const articles: NewsArticle[] = [];
+        const sourceName = this.getSourceNameFromUrl(feedUrl);
+        
+        console.log(`Processing ${data.items?.length || 0} items from RSS-to-JSON for ${sourceName}`);
+
+        const items = data.items || [];
+        for (let i = 0; i < Math.min(items.length, 5); i++) {
+            const item = items[i];
+            
+            const title = item.title?.trim();
+            const link = item.link || item.guid;
+            const description = item.description || item.content || item.summary;
+            const pubDate = item.pubDate || item.published;
+            const author = item.author || item.creator;
+
+            if (!title || !link) continue;
+
+            // Filter relevance for Indian content
+            if (!this.isRelevantIndianArticle(title, description || '', filters.category || 'ai')) {
+                continue;
             }
 
-            return this.parseRSSContent(response.data.contents, feedUrl, filters);
+            const cleanDescription = this.cleanHtmlTags(description || '');
+            const publishedAt = this.parseDate(pubDate);
+
+            articles.push({
+                id: this.generateId(link),
+                title: this.cleanHtmlTags(title),
+                description: cleanDescription.substring(0, 200) + (cleanDescription.length > 200 ? '...' : ''),
+                content: cleanDescription,
+                url: link,
+                urlToImage: this.getValidImageUrl(item.thumbnail || item.enclosure?.url, title, filters.category || 'ai'),
+                publishedAt,
+                source: {
+                    id: sourceName.toLowerCase().replace(/\s+/g, '-'),
+                    name: sourceName
+                },
+                author: author || 'Unknown Author',
+                category: (filters.category === 'ai' || filters.category === 'startup') ? filters.category : 'ai',
+                region: 'india',
+                tags: this.extractTags(title + ' ' + cleanDescription),
+                readTime: this.calculateReadTime(cleanDescription),
+                isMockArticle: false
+            });
+        }
+
+        console.log(`Successfully parsed ${articles.length} articles from RSS-to-JSON`);
+        return articles;
+    }
+
+    // Fetch and parse individual RSS feed
+    private async fetchRSSFeed(feedUrl: string, filters: NewsFilter): Promise<NewsArticle[]> {
+        try {
+            console.log(`Attempting to fetch RSS feed: ${feedUrl}`);
+            
+            // Try multiple CORS proxies
+            const proxies = [
+                `https://api.allorigins.win/get?url=${encodeURIComponent(feedUrl)}`,
+                `https://corsproxy.io/?${encodeURIComponent(feedUrl)}`,
+                `https://cors-anywhere.herokuapp.com/${feedUrl}`
+            ];
+
+            for (let i = 0; i < proxies.length; i++) {
+                try {
+                    const proxyUrl = proxies[i];
+                    console.log(`Trying proxy ${i + 1}: ${proxyUrl.split('?')[0]}`);
+                    
+                    const response = await axios.get(proxyUrl, {
+                        timeout: 8000, // 8 second timeout for RSS
+                        headers: {
+                            'Accept': 'application/json, application/xml, text/xml, */*'
+                        }
+                    });
+
+                    let content = '';
+                    
+                    // Handle different proxy response formats
+                    if (response.data?.contents) {
+                        // allorigins.win format
+                        content = response.data.contents;
+                    } else if (typeof response.data === 'string') {
+                        // Direct content or other proxy formats
+                        content = response.data;
+                    } else {
+                        console.log(`Unexpected response format from proxy ${i + 1}:`, typeof response.data);
+                        continue;
+                    }
+
+                    if (!content || content.trim().length === 0) {
+                        console.log(`Empty content from proxy ${i + 1}`);
+                        continue;
+                    }
+
+                    const articles = this.parseRSSContent(content, feedUrl, filters);
+                    if (articles.length > 0) {
+                        console.log(`Successfully parsed ${articles.length} articles using proxy ${i + 1}`);
+                        return articles;
+                    }
+                    
+                } catch (proxyError) {
+                    console.log(`Proxy ${i + 1} failed:`, proxyError instanceof Error ? proxyError.message : proxyError);
+                    continue;
+                }
+            }
+
+            throw new Error('All proxies failed');
+
         } catch (error) {
-            console.error(`Failed to fetch RSS from ${feedUrl}:`, error);
+            console.error(`Failed to fetch RSS from ${feedUrl}:`, error instanceof Error ? error.message : error);
             return [];
         }
     }
@@ -430,65 +551,124 @@ class NewsService {
     // Parse RSS XML content
     private parseRSSContent(xmlContent: string, feedUrl: string, filters: NewsFilter): NewsArticle[] {
         try {
-            const parser = new DOMParser();
-            const xmlDoc = parser.parseFromString(xmlContent, 'text/xml');
+            // Clean and prepare XML content
+            let cleanXml = xmlContent.trim();
             
-            // Check for parsing errors
+            // Remove any BOM (Byte Order Mark) characters
+            cleanXml = cleanXml.replace(/^\uFEFF/, '');
+            
+            // Check if content looks like XML
+            if (!cleanXml.includes('<') || !cleanXml.includes('>')) {
+                console.log('Content does not appear to be XML:', cleanXml.substring(0, 100));
+                return [];
+            }
+
+            // Try to fix common XML issues
+            cleanXml = cleanXml.replace(/&(?!(amp|lt|gt|quot|apos);)/g, '&amp;');
+            
+            const parser = new DOMParser();
+            const xmlDoc = parser.parseFromString(cleanXml, 'application/xml');
+            
+            // Check for parsing errors more thoroughly
             const parserError = xmlDoc.querySelector('parsererror');
-            if (parserError) {
-                throw new Error('XML parsing failed');
-            }
-
-            const items = xmlDoc.querySelectorAll('item');
-            const articles: NewsArticle[] = [];
-
-            const sourceName = this.getSourceNameFromUrl(feedUrl);
-
-            for (let i = 0; i < Math.min(items.length, 5); i++) { // Max 5 articles per feed
-                const item = items[i];
-                
-                const title = item.querySelector('title')?.textContent?.trim();
-                const link = item.querySelector('link')?.textContent?.trim();
-                const description = item.querySelector('description')?.textContent?.trim();
-                const pubDate = item.querySelector('pubDate')?.textContent?.trim();
-                const author = item.querySelector('author')?.textContent?.trim() || 
-                             item.querySelector('dc\\:creator')?.textContent?.trim();
-
-                if (!title || !link) continue;
-
-                // Filter relevance for Indian content
-                if (!this.isRelevantIndianArticle(title, description || '', filters.category || 'ai')) {
-                    continue;
+            if (parserError || xmlDoc.documentElement.tagName === 'parsererror') {
+                console.log('XML parsing failed, trying as text/xml');
+                // Try parsing as text/xml instead
+                const xmlDoc2 = parser.parseFromString(cleanXml, 'text/xml');
+                const parserError2 = xmlDoc2.querySelector('parsererror');
+                if (parserError2) {
+                    throw new Error(`XML parsing failed: ${parserError2.textContent}`);
                 }
-
-                const cleanDescription = this.cleanHtmlTags(description || '');
-                const publishedAt = pubDate ? new Date(pubDate).toISOString() : new Date().toISOString();
-
-                articles.push({
-                    id: this.generateId(link),
-                    title: this.cleanHtmlTags(title),
-                    description: cleanDescription.substring(0, 200) + (cleanDescription.length > 200 ? '...' : ''),
-                    content: cleanDescription,
-                    url: link,
-                    urlToImage: this.getValidImageUrl(null, title, filters.category || 'ai'),
-                    publishedAt,
-                    source: {
-                        id: sourceName.toLowerCase().replace(/\s+/g, '-'),
-                        name: sourceName
-                    },
-                    author: author || 'Unknown Author',
-                    category: (filters.category === 'ai' || filters.category === 'startup') ? filters.category : 'ai',
-                    region: 'india',
-                    tags: this.extractTags(title + ' ' + cleanDescription),
-                    readTime: this.calculateReadTime(cleanDescription),
-                    isMockArticle: false
-                });
+                return this.extractArticlesFromXml(xmlDoc2, feedUrl, filters);
             }
 
-            return articles;
+            return this.extractArticlesFromXml(xmlDoc, feedUrl, filters);
         } catch (error) {
             console.error('RSS parsing error:', error);
+            console.log('Failed XML content (first 500 chars):', xmlContent.substring(0, 500));
             return [];
+        }
+    }
+
+    // Extract articles from parsed XML document
+    private extractArticlesFromXml(xmlDoc: Document, feedUrl: string, filters: NewsFilter): NewsArticle[] {
+        const items = xmlDoc.querySelectorAll('item, entry'); // Support both RSS and Atom feeds
+        const articles: NewsArticle[] = [];
+        const sourceName = this.getSourceNameFromUrl(feedUrl);
+
+        console.log(`Found ${items.length} items in RSS feed from ${sourceName}`);
+
+        for (let i = 0; i < Math.min(items.length, 5); i++) { // Max 5 articles per feed
+            const item = items[i];
+            
+            // Try different selectors for RSS vs Atom feeds
+            const title = this.getTextContent(item, ['title']);
+            const link = this.getTextContent(item, ['link', 'guid']) || 
+                        item.querySelector('link')?.getAttribute('href');
+            const description = this.getTextContent(item, ['description', 'summary', 'content']);
+            const pubDate = this.getTextContent(item, ['pubDate', 'published', 'updated']);
+            const author = this.getTextContent(item, ['author', 'dc:creator', 'creator']) ||
+                          item.querySelector('author name')?.textContent?.trim();
+
+            if (!title || !link) {
+                console.log('Skipping item - missing title or link');
+                continue;
+            }
+
+            // Filter relevance for Indian content
+            if (!this.isRelevantIndianArticle(title, description || '', filters.category || 'ai')) {
+                console.log('Skipping irrelevant article:', title.substring(0, 50));
+                continue;
+            }
+
+            const cleanDescription = this.cleanHtmlTags(description || '');
+            const publishedAt = this.parseDate(pubDate);
+
+            articles.push({
+                id: this.generateId(link),
+                title: this.cleanHtmlTags(title),
+                description: cleanDescription.substring(0, 200) + (cleanDescription.length > 200 ? '...' : ''),
+                content: cleanDescription,
+                url: link,
+                urlToImage: this.getValidImageUrl(null, title, filters.category || 'ai'),
+                publishedAt,
+                source: {
+                    id: sourceName.toLowerCase().replace(/\s+/g, '-'),
+                    name: sourceName
+                },
+                author: author || 'Unknown Author',
+                category: (filters.category === 'ai' || filters.category === 'startup') ? filters.category : 'ai',
+                region: 'india',
+                tags: this.extractTags(title + ' ' + cleanDescription),
+                readTime: this.calculateReadTime(cleanDescription),
+                isMockArticle: false
+            });
+        }
+
+        console.log(`Successfully parsed ${articles.length} articles from ${sourceName}`);
+        return articles;
+    }
+
+    // Helper to get text content from multiple possible selectors
+    private getTextContent(element: Element, selectors: string[]): string | null {
+        for (const selector of selectors) {
+            const found = element.querySelector(selector);
+            if (found?.textContent?.trim()) {
+                return found.textContent.trim();
+            }
+        }
+        return null;
+    }
+
+    // Parse date with fallback
+    private parseDate(dateStr: string | null): string {
+        if (!dateStr) return new Date().toISOString();
+        
+        try {
+            const date = new Date(dateStr);
+            return isNaN(date.getTime()) ? new Date().toISOString() : date.toISOString();
+        } catch {
+            return new Date().toISOString();
         }
     }
 
