@@ -24,20 +24,20 @@ export default function NewsCard({ article, compact = false, preferences, onUpda
     useEffect(() => {
         const validateImageUrl = (url: string): boolean => {
             if (!url || typeof url !== 'string') return false;
-            
+
             try {
                 new URL(url);
             } catch {
                 return false;
             }
-            
+
             // Check for common broken image patterns
             const brokenPatterns = [
                 'removed.png', 'deleted.jpg', 'placeholder.jpg', 'default.png',
                 'no-image', 'image-not-found', 'broken.jpg', 'missing.png',
                 'thumbnail.jpg', 'avatar.png', 'logo.png', 'icon.png'
             ];
-            
+
             return !brokenPatterns.some(pattern => url.toLowerCase().includes(pattern));
         };
 
@@ -158,7 +158,7 @@ export default function NewsCard({ article, compact = false, preferences, onUpda
                     />
                 ) : (
                     <div className="news-card-image bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 flex items-center justify-center">
-                        <div 
+                        <div
                             className="w-full h-full flex items-center justify-center"
                             dangerouslySetInnerHTML={{
                                 __html: `

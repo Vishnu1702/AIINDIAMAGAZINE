@@ -19,7 +19,7 @@ class NewsService {
     // Detect if running locally or in production
     private getNewsApiUrl(): string {
         const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-        
+
         if (isLocalhost) {
             // Local development - use NewsAPI directly
             return 'https://newsapi.org/v2';
@@ -101,7 +101,7 @@ class NewsService {
     private isValidImageUrl(url: string): boolean {
         if (!url || url.trim() === '') return false;
         if (url === 'null' || url === 'undefined') return false;
-        
+
         // Check for common invalid patterns from NewsAPI
         if (url.includes('removed.png') || url.includes('default.jpg')) return false;
         if (url.endsWith('/removed') || url.includes('placeholder')) return false;
@@ -110,7 +110,7 @@ class NewsService {
             const urlObj = new URL(url);
             // Must be http or https
             if (!['http:', 'https:'].includes(urlObj.protocol)) return false;
-            
+
             // Check for common image extensions
             const imageExtensions = /\.(jpg|jpeg|png|gif|webp|svg)(\?.*)?$/i;
             const hasImageExtension = imageExtensions.test(url);
@@ -218,7 +218,7 @@ class NewsService {
         try {
             const baseUrl = this.getNewsApiUrl();
             const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-            
+
             const params = new URLSearchParams({
                 language: 'en',
                 sortBy: 'publishedAt',
@@ -304,7 +304,7 @@ class NewsService {
         try {
             const baseUrl = this.getNewsApiUrl();
             const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-            
+
             const params = new URLSearchParams({
                 language: 'en',
                 sortBy: 'publishedAt',
@@ -480,20 +480,20 @@ class NewsService {
 
             // Set overall timeout for RSS feeds - don't let them block the app
             const RSS_TIMEOUT = 10000; // 10 seconds max for all RSS feeds
-            
+
             const rssPromise = this.fetchRSSFeedsWithTimeout(relevantFeeds, filters);
-            
+
             try {
                 const allRssArticles = await Promise.race([
                     rssPromise,
-                    new Promise<NewsArticle[]>((_, reject) => 
+                    new Promise<NewsArticle[]>((_, reject) =>
                         setTimeout(() => reject(new Error('RSS timeout')), RSS_TIMEOUT)
                     )
                 ]);
-                
+
                 console.log(`Total RSS articles collected: ${allRssArticles.length}`);
                 return allRssArticles.slice(0, 5); // Limit to 5 articles max
-                
+
             } catch (timeoutError) {
                 console.warn('RSS feeds timed out, continuing without them:', timeoutError);
                 return []; // Return empty array instead of hanging
@@ -508,35 +508,35 @@ class NewsService {
     // Helper method to fetch RSS feeds with internal timeout
     private async fetchRSSFeedsWithTimeout(feeds: string[], filters: NewsFilter): Promise<NewsArticle[]> {
         const allRssArticles: NewsArticle[] = [];
-        
+
         // Process feeds sequentially with short timeouts
         for (let i = 0; i < feeds.length && i < 3; i++) { // Max 3 feeds
             try {
                 console.log(`Processing RSS feed ${i + 1} of ${Math.min(feeds.length, 3)}`);
-                
+
                 const feedPromise = this.fetchRSSFeedWithFallback(feeds[i], filters);
-                const timeoutPromise = new Promise<NewsArticle[]>((_, reject) => 
+                const timeoutPromise = new Promise<NewsArticle[]>((_, reject) =>
                     setTimeout(() => reject(new Error('Feed timeout')), 3000) // 3 seconds per feed
                 );
-                
+
                 const articles = await Promise.race([feedPromise, timeoutPromise]);
-                
+
                 if (articles.length > 0) {
                     console.log(`RSS feed ${i + 1} returned ${articles.length} articles`);
                     allRssArticles.push(...articles);
                 }
-                
+
             } catch (feedError) {
                 console.warn(`RSS feed ${i + 1} failed or timed out:`, feedError instanceof Error ? feedError.message : feedError);
                 // Continue with next feed
             }
-            
+
             // Small delay between feeds
             if (i < feeds.length - 1) {
                 await new Promise(resolve => setTimeout(resolve, 500));
             }
         }
-        
+
         return allRssArticles;
     }
 
@@ -872,7 +872,7 @@ class NewsService {
         if (!article.title && !article.description) return false;
 
         const content = `${article.title || ''} ${article.description || ''}`.toLowerCase();
-        
+
         // Filter out clearly irrelevant domains/sources for AI content
         const irrelevantDomains = [
             'onefootball.com',
@@ -961,7 +961,7 @@ class NewsService {
 
         // For other categories, allow all articles
         return true;
-    }    private calculateReadTime(content: string): number {
+    } private calculateReadTime(content: string): number {
         const wordsPerMinute = 200;
         const words = content.split(' ').length;
         return Math.ceil(words / wordsPerMinute);
