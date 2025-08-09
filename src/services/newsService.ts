@@ -731,7 +731,7 @@ class NewsService {
         });
 
         if (!data.articles || data.articles.length === 0) {
-            console.log('No articles in NewsAPI response, falling back to mock data');
+            console.log('No articles in NewsAPI response');
             return [];
         }
 
@@ -846,22 +846,6 @@ class NewsService {
             'fifa.com'
         ];
 
-        // Boost relevance for Indian tech/business sources
-        const indianSources = [
-            'economictimes.indiatimes.com',
-            'livemint.com',
-            'timesofindia.indiatimes.com',
-            'business-standard.com',
-            'financialexpress.com',
-            'inc42.com',
-            'yourstory.com',
-            'entrackr.com',
-            'medianama.com',
-            'analyticsindiamag.com'
-        ];
-
-        const isIndianSource = article.url && indianSources.some(domain => article.url.includes(domain));
-
         // Check if article is from sports/irrelevant domains
         if (article.url && irrelevantDomains.some(domain => article.url.includes(domain))) {
             console.log('Filtering out irrelevant article from sports domain:', article.title);
@@ -869,28 +853,32 @@ class NewsService {
         }
 
         if (filters.category === 'ai') {
-            // AI category - look for specific AI-related terms
+            // AI category - balanced keyword matching
             const aiKeywords = [
-                'artificial intelligence',
-                'machine learning',
-                'deep learning',
-                'neural network',
-                'chatgpt',
-                'openai',
-                'generative ai',
-                'ai model',
-                'ai technology',
-                'automation',
-                'robotics',
-                'algorithm'
+                'artificial intelligence', 'ai', 'machine learning', 'ml',
+                'deep learning', 'neural network', 'chatgpt', 'openai',
+                'generative ai', 'ai model', 'ai technology', 'automation',
+                'robotics', 'algorithm', 'data science', 'computer vision',
+                'natural language', 'gpt', 'llm', 'large language model'
             ];
 
-            // Must contain at least one specific AI keyword
+            // Tech keywords that are AI-adjacent
+            const techKeywords = [
+                'technology', 'tech', 'software', 'digital', 'innovation',
+                'microsoft', 'google', 'apple', 'meta', 'nvidia', 'tesla'
+            ];
+
+            // Check for AI keywords first
             const hasAiKeyword = aiKeywords.some(keyword =>
-                content.includes(keyword) || content.includes(keyword.replace(' ', '-'))
+                content.includes(keyword.toLowerCase())
             );
 
-            // Exclude sports-related content even if it mentions AI
+            // If no direct AI keywords, check for tech keywords + context
+            const hasTechKeyword = techKeywords.some(keyword =>
+                content.includes(keyword.toLowerCase())
+            );
+
+            // Exclude sports-related content
             const sportsKeywords = [
                 'football', 'soccer', 'madrid', 'barcelona', 'premier league',
                 'champions league', 'fifa', 'uefa', 'goal', 'kit', 'jersey',
@@ -899,16 +887,16 @@ class NewsService {
 
             const isSports = sportsKeywords.some(keyword => content.includes(keyword));
 
-            // For Indian region, be more lenient with Indian sources
-            if (filters.region === 'india' && isIndianSource) {
-                return hasAiKeyword && !isSports;
+            if (isSports) {
+                return false;
             }
 
-            return hasAiKeyword && !isSports;
+            // Accept if has AI keywords, or tech keywords with reasonable context
+            return hasAiKeyword || (hasTechKeyword && content.length > 50);
         }
 
         if (filters.category === 'startup') {
-            // Startup category - look for business/funding related terms
+            // Startup category - balanced keyword matching
             const startupKeywords = [
                 'startup', 'venture capital', 'funding', 'investment',
                 'series a', 'series b', 'series c', 'seed round',
@@ -916,14 +904,17 @@ class NewsService {
                 'entrepreneur', 'founder', 'fintech', 'saas'
             ];
 
+            // Business keywords that are startup-adjacent
+            const businessKeywords = [
+                'business', 'company', 'enterprise', 'innovation',
+                'tech company', 'technology company', 'silicon valley'
+            ];
+
             const hasStartupKeyword = startupKeywords.some(keyword => content.includes(keyword));
+            const hasBusinessKeyword = businessKeywords.some(keyword => content.includes(keyword));
 
-            // For Indian region, be more lenient with Indian sources
-            if (filters.region === 'india' && isIndianSource) {
-                return hasStartupKeyword;
-            }
-
-            return hasStartupKeyword;
+            // Accept if has startup keywords, or business keywords with reasonable context
+            return hasStartupKeyword || (hasBusinessKeyword && content.length > 50);
         }
 
         // For other categories, allow all articles
