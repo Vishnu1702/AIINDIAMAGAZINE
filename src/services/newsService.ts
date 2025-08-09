@@ -279,11 +279,18 @@ class NewsService {
             console.log('Transformed articles from NewsAPI:', transformedArticles.length);
             return transformedArticles;
         } catch (error) {
+            console.error('NewsAPI request failed!');
+
             if (axios.isAxiosError(error)) {
-                console.error('NewsAPI error:', {
+                console.error('NewsAPI axios error details:', {
                     status: error.response?.status,
+                    statusText: error.response?.statusText,
                     data: error.response?.data,
-                    message: error.message
+                    message: error.message,
+                    config: {
+                        url: error.config?.url,
+                        method: error.config?.method
+                    }
                 });
 
                 // If it's a 400 error, try with simpler query
@@ -292,7 +299,7 @@ class NewsService {
                     return this.getSimpleNewsApiArticles(filters);
                 }
             } else {
-                console.error('NewsAPI error:', error);
+                console.error('NewsAPI non-axios error:', error);
             }
             // Return empty array if API fails
             return [];

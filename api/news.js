@@ -21,19 +21,22 @@ module.exports = async function handler(req, res) {
     try {
         const { q, language, sortBy, pageSize, category, country, sources } = req.query;
 
-        // Your NewsAPI key - in production, this should be an environment variable
+        // Your NewsAPI key
         const NEWS_API_KEY = 'ff954d9cc07846abba3a0042abf89219';
 
-        const params = new URLSearchParams({
+        // Build parameters object
+        const params = {
             apiKey: NEWS_API_KEY,
-            ...(q && { q }),
-            ...(language && { language }),
-            ...(sortBy && { sortBy }),
-            ...(pageSize && { pageSize }),
-            ...(category && { category }),
-            ...(country && { country }),
-            ...(sources && { sources })
-        });
+            language: language || 'en',
+            sortBy: sortBy || 'publishedAt',
+            pageSize: pageSize || '30'
+        };
+
+        // Add optional parameters only if they exist
+        if (q) params.q = q;
+        if (category) params.category = category;
+        if (country) params.country = country;
+        if (sources) params.sources = sources;
 
         // Determine which NewsAPI endpoint to use
         let endpoint = 'everything';
@@ -41,28 +44,41 @@ module.exports = async function handler(req, res) {
             endpoint = 'top-headlines';
         }
 
+        console.log('API Request:', `https://newsapi.org/v2/${endpoint}`, params);
+
         const response = await axios.get(`https://newsapi.org/v2/${endpoint}`, {
-            params: Object.fromEntries(params),
+            params,
             headers: {
                 'Content-Type': 'application/json',
+                'User-Agent': 'DesiAIMagazine/1.0'
             },
-            timeout: 10000, // 10 second timeout
+            timeout: 10000
         });
 
+        console.log('API Response status:', response.status);
         res.status(200).json(response.data);
+        
     } catch (error) {
-        console.error('NewsAPI proxy error:', error);
+        console.error('NewsAPI proxy error:', error.message);
+        console.error('Error details:', error.response?.data);
 
         if (error.response) {
-            res.status(error.response.status || 500).json({
+            // Forward the exact error from NewsAPI
+            res.status(500).json({
                 error: 'NewsAPI request failed',
                 message: error.message,
+                status: error.response.status,
                 details: error.response.data
+            });
+        } else if (error.code === 'ECONNABORTED') {
+            res.status(408).json({
+                error: 'Request timeout',
+                message: 'NewsAPI request timed out'
             });
         } else {
             res.status(500).json({
                 error: 'Internal server error',
-                message: 'Failed to fetch news'
+                message: error.message || 'Failed to fetch news'
             });
         }
     }
