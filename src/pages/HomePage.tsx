@@ -41,7 +41,7 @@ export default function HomePage({ sections, preferences, onUpdatePreferences }:
                     timeRange: 'today'
                 }),
                 // Load all sections in parallel
-                ...sections.map(section => 
+                ...sections.map(section =>
                     newsService.getAggregatedNews({
                         category: section.category,
                         region: section.region,

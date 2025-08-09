@@ -24,18 +24,58 @@ class NewsService {
 
     // Create SVG placeholder images as data URIs
     private createPlaceholderImage(text: string, bgColor: string = '#0066CC'): string {
+        // Create a gradient background for more visual appeal
+        const lightColor = this.lightenColor(bgColor, 20);
         const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="200" viewBox="0 0 400 200">
-            <rect width="400" height="200" fill="${bgColor}"/>
-            <text x="50%" y="50%" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="white" text-anchor="middle" dominant-baseline="middle">${text}</text>
+            <defs>
+                <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" style="stop-color:${bgColor};stop-opacity:1" />
+                    <stop offset="100%" style="stop-color:${lightColor};stop-opacity:1" />
+                </linearGradient>
+            </defs>
+            <rect width="400" height="200" fill="url(#grad)"/>
+            <circle cx="200" cy="80" r="25" fill="white" opacity="0.1"/>
+            <text x="50%" y="65%" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="white" text-anchor="middle" dominant-baseline="middle">${text}</text>
+            <text x="50%" y="80%" font-family="Arial, sans-serif" font-size="12" fill="white" text-anchor="middle" dominant-baseline="middle" opacity="0.8">News Article</text>
         </svg>`;
         return `data:image/svg+xml;base64,${btoa(svg)}`;
+    }
+
+    // Helper function to lighten a color
+    private lightenColor(color: string, percent: number): string {
+        const num = parseInt(color.replace("#", ""), 16);
+        const amt = Math.round(2.55 * percent);
+        const R = (num >> 16) + amt;
+        const G = (num >> 8 & 0x00FF) + amt;
+        const B = (num & 0x0000FF) + amt;
+        return "#" + (0x1000000 + (R < 255 ? R < 1 ? 0 : R : 255) * 0x10000 +
+            (G < 255 ? G < 1 ? 0 : G : 255) * 0x100 +
+            (B < 255 ? B < 1 ? 0 : B : 255))
+            .toString(16).slice(1);
     }
 
     // Smart image URL handling with fallbacks
     private getValidImageUrl(imageUrl: string | null | undefined, title: string, category: string): string {
         // If we have a valid image URL, return it
         if (imageUrl && this.isValidImageUrl(imageUrl)) {
+            // Add error handling parameter for broken images
             return imageUrl;
+        }
+
+        // Common broken image patterns from NewsAPI
+        const brokenPatterns = [
+            'removed.png',
+            'default.jpg',
+            'placeholder.jpg',
+            'no-image',
+            'image-not-found',
+            '/removed',
+            'https://www.facebook.com/tr',
+            'https://sb.scorecardresearch.com'
+        ];
+
+        if (imageUrl && brokenPatterns.some(pattern => imageUrl.includes(pattern))) {
+            console.log('Detected broken image pattern, using placeholder:', imageUrl);
         }
 
         // Create a contextual placeholder based on article content
@@ -49,16 +89,33 @@ class NewsService {
     private isValidImageUrl(url: string): boolean {
         if (!url || url.trim() === '') return false;
         if (url === 'null' || url === 'undefined') return false;
+        
+        // Check for common invalid patterns from NewsAPI
+        if (url.includes('removed.png') || url.includes('default.jpg')) return false;
+        if (url.endsWith('/removed') || url.includes('placeholder')) return false;
 
-        // Check for common image extensions
-        const imageExtensions = /\.(jpg|jpeg|png|gif|webp|svg)(\?.*)?$/i;
-        const hasImageExtension = imageExtensions.test(url);
+        try {
+            const urlObj = new URL(url);
+            // Must be http or https
+            if (!['http:', 'https:'].includes(urlObj.protocol)) return false;
+            
+            // Check for common image extensions
+            const imageExtensions = /\.(jpg|jpeg|png|gif|webp|svg)(\?.*)?$/i;
+            const hasImageExtension = imageExtensions.test(url);
 
-        // Check for common image hosting patterns
-        const imageHostPatterns = /(images?|media|cdn|static|assets|img)/i;
-        const hasImageHost = imageHostPatterns.test(url);
+            // Check for common image hosting patterns
+            const imageHostPatterns = /(images?|media|cdn|static|assets|img|photo|picture)/i;
+            const hasImageHost = imageHostPatterns.test(url);
 
-        return hasImageExtension || hasImageHost || url.startsWith('data:image/');
+            // Check for data URLs
+            if (url.startsWith('data:image/')) return true;
+
+            // Must have either image extension or be from image hosting domain
+            return hasImageExtension || hasImageHost;
+        } catch {
+            // Invalid URL format
+            return false;
+        }
     }
 
     // Generate contextual placeholder text
@@ -127,7 +184,7 @@ class NewsService {
         hindu_sci_tech: 'https://www.thehindu.com/sci-tech/technology/feeder/default.rss',
         business_standard_tech: 'https://www.business-standard.com/rss/technology-106.rss',
         analytics_india: 'https://analyticsindiamag.com/feed/',
-        
+
         // Startup & Business focused  
         inc42: 'https://inc42.com/feed/',
         yourstory: 'https://yourstory.com/feed',
@@ -136,7 +193,7 @@ class NewsService {
         livemint_companies: 'https://www.livemint.com/rss/companies',
         et_startups: 'https://economictimes.indiatimes.com/small-biz/startups/rssfeeds/63319174.cms',
         medianama: 'https://www.medianama.com/feed/',
-        
+
         // General business with tech coverage
         business_today: 'https://www.businesstoday.in/rss/technology-news',
         financial_express_tech: 'https://www.financialexpress.com/rss/industry-technology/feed/',
@@ -151,7 +208,7 @@ class NewsService {
                 apiKey: this.NEWS_API_KEY,
                 language: 'en',
                 sortBy: 'publishedAt',
-                pageSize: '20',
+                pageSize: '30', // Increased from 20 to get more articles
             });
 
             // Build more specific queries to avoid irrelevant matches
@@ -165,9 +222,15 @@ class NewsService {
                 query = 'technology';
             }
 
-            // For India-specific content, adjust the query
+            // For India-specific content, enhance the query with Indian sources and terms
             if (filters.region === 'india') {
-                query += ' India';
+                if (filters.category === 'ai') {
+                    query += ' AND (India OR Indian OR Mumbai OR Bangalore OR Delhi OR "Tech Mahindra" OR Infosys OR TCS OR Wipro OR "IIT" OR "Indian Institute")';
+                } else if (filters.category === 'startup') {
+                    query += ' AND (India OR Indian OR Mumbai OR Bangalore OR Delhi OR Hyderabad OR "Indian startup" OR "India funding" OR Flipkart OR Paytm OR Zomato OR Swiggy OR "YourStory" OR "Inc42")';
+                } else {
+                    query += ' AND India';
+                }
             }
 
             params.append('q', query);
@@ -291,17 +354,17 @@ class NewsService {
     // Aggregate articles from multiple sources
     async getAggregatedNews(filters: NewsFilter): Promise<NewsArticle[]> {
         console.log('getAggregatedNews called with filters:', filters);
-        
+
         // Create cache key based on filters
         const cacheKey = `${filters.category || 'all'}-${filters.region || 'all'}-${filters.timeRange || 'all'}`;
-        
+
         // Check cache first
         const cached = this.cache.get(cacheKey);
         if (cached && (Date.now() - cached.timestamp) < this.CACHE_DURATION) {
             console.log('Returning cached data for:', cacheKey);
             return cached.data;
         }
-        
+
         try {
             let allArticles: NewsArticle[] = [];
 
@@ -313,10 +376,11 @@ class NewsService {
 
             // If filtering for India, add Indian-specific sources
             if (filters.region === 'india') {
-                console.log('Fetching Indian RSS articles...');
-                const indianArticles = await this.getIndianRSSNews(filters);
-                console.log('Indian RSS articles received:', indianArticles.length);
-                allArticles = allArticles.concat(indianArticles);
+                console.log('Skipping RSS feeds due to CORS issues - using NewsAPI only');
+                // Temporarily disabled RSS feeds due to browser CORS restrictions
+                // const indianArticles = await this.getIndianRSSNews(filters);
+                // console.log('Indian RSS articles received:', indianArticles.length);
+                // allArticles = allArticles.concat(indianArticles);
             }
 
             console.log('Total articles before deduplication:', allArticles.length);
@@ -333,13 +397,13 @@ class NewsService {
             const sortedArticles = uniqueArticles.sort((a, b) =>
                 new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
             );
-            
+
             // Cache the results
             this.cache.set(cacheKey, {
                 data: sortedArticles,
                 timestamp: Date.now()
             });
-            
+
             return sortedArticles;
         } catch (error) {
             console.error('Error aggregating news:', error);
@@ -356,10 +420,8 @@ class NewsService {
                 relevantFeeds.push(
                     this.INDIAN_RSS_FEEDS.analytics_india,
                     this.INDIAN_RSS_FEEDS.et_tech,
-                    this.INDIAN_RSS_FEEDS.livemint_tech,
-                    this.INDIAN_RSS_FEEDS.times_tech,
-                    this.INDIAN_RSS_FEEDS.hindu_sci_tech,
-                    this.INDIAN_RSS_FEEDS.business_standard_tech
+                    this.INDIAN_RSS_FEEDS.livemint_tech
+                    // Reduced to just 3 reliable feeds for AI
                 );
             }
 
@@ -367,35 +429,33 @@ class NewsService {
                 relevantFeeds.push(
                     this.INDIAN_RSS_FEEDS.inc42,
                     this.INDIAN_RSS_FEEDS.yourstory,
-                    this.INDIAN_RSS_FEEDS.entrackr,
-                    this.INDIAN_RSS_FEEDS.vccircle,
-                    this.INDIAN_RSS_FEEDS.et_startups,
-                    this.INDIAN_RSS_FEEDS.medianama,
-                    this.INDIAN_RSS_FEEDS.livemint_companies
+                    this.INDIAN_RSS_FEEDS.entrackr
+                    // Reduced to just 3 reliable feeds for startups
                 );
             }
 
             console.log(`Fetching ${relevantFeeds.length} Indian RSS feeds for ${filters.category}`);
 
-            // Fetch RSS feeds in parallel with timeout
-            const rssPromises = relevantFeeds.map(feedUrl => 
-                this.fetchRSSFeedWithFallback(feedUrl, filters)
-            );
-
-            const results = await Promise.allSettled(rssPromises);
-            const allRssArticles: NewsArticle[] = [];
-
-            results.forEach((result, index) => {
-                if (result.status === 'fulfilled' && result.value.length > 0) {
-                    console.log(`RSS feed ${index + 1} returned ${result.value.length} articles`);
-                    allRssArticles.push(...result.value);
-                } else if (result.status === 'rejected') {
-                    console.warn(`RSS feed ${index + 1} failed:`, result.reason);
-                }
-            });
-
-            console.log(`Total RSS articles collected: ${allRssArticles.length}`);
-            return allRssArticles.slice(0, 10); // Limit to 10 articles per category
+            // Set overall timeout for RSS feeds - don't let them block the app
+            const RSS_TIMEOUT = 10000; // 10 seconds max for all RSS feeds
+            
+            const rssPromise = this.fetchRSSFeedsWithTimeout(relevantFeeds, filters);
+            
+            try {
+                const allRssArticles = await Promise.race([
+                    rssPromise,
+                    new Promise<NewsArticle[]>((_, reject) => 
+                        setTimeout(() => reject(new Error('RSS timeout')), RSS_TIMEOUT)
+                    )
+                ]);
+                
+                console.log(`Total RSS articles collected: ${allRssArticles.length}`);
+                return allRssArticles.slice(0, 5); // Limit to 5 articles max
+                
+            } catch (timeoutError) {
+                console.warn('RSS feeds timed out, continuing without them:', timeoutError);
+                return []; // Return empty array instead of hanging
+            }
 
         } catch (error) {
             console.error('RSS fetch error:', error);
@@ -403,75 +463,94 @@ class NewsService {
         }
     }
 
-    // Fetch RSS feed with multiple fallback strategies
-    private async fetchRSSFeedWithFallback(feedUrl: string, filters: NewsFilter): Promise<NewsArticle[]> {
-        // Try RSS parsing first
-        let articles = await this.fetchRSSFeed(feedUrl, filters);
-        if (articles.length > 0) {
-            return articles;
+    // Helper method to fetch RSS feeds with internal timeout
+    private async fetchRSSFeedsWithTimeout(feeds: string[], filters: NewsFilter): Promise<NewsArticle[]> {
+        const allRssArticles: NewsArticle[] = [];
+        
+        // Process feeds sequentially with short timeouts
+        for (let i = 0; i < feeds.length && i < 3; i++) { // Max 3 feeds
+            try {
+                console.log(`Processing RSS feed ${i + 1} of ${Math.min(feeds.length, 3)}`);
+                
+                const feedPromise = this.fetchRSSFeedWithFallback(feeds[i], filters);
+                const timeoutPromise = new Promise<NewsArticle[]>((_, reject) => 
+                    setTimeout(() => reject(new Error('Feed timeout')), 3000) // 3 seconds per feed
+                );
+                
+                const articles = await Promise.race([feedPromise, timeoutPromise]);
+                
+                if (articles.length > 0) {
+                    console.log(`RSS feed ${i + 1} returned ${articles.length} articles`);
+                    allRssArticles.push(...articles);
+                }
+                
+            } catch (feedError) {
+                console.warn(`RSS feed ${i + 1} failed or timed out:`, feedError instanceof Error ? feedError.message : feedError);
+                // Continue with next feed
+            }
+            
+            // Small delay between feeds
+            if (i < feeds.length - 1) {
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
         }
+        
+        return allRssArticles;
+    }
 
-        // Try RSS-to-JSON service as fallback
+    // Fetch RSS feed with multiple fallback strategies - simplified for speed
+    private async fetchRSSFeedWithFallback(feedUrl: string, filters: NewsFilter): Promise<NewsArticle[]> {
+        // Try only the most reliable RSS-to-JSON service first
         try {
-            console.log(`Trying RSS-to-JSON fallback for: ${feedUrl}`);
-            articles = await this.tryRSSToJson(feedUrl, filters);
+            console.log(`Trying RSS-to-JSON for: ${feedUrl}`);
+            const articles = await this.tryRSSToJson(feedUrl, filters);
             if (articles.length > 0) {
                 return articles;
             }
         } catch (error) {
-            console.log('RSS-to-JSON fallback failed:', error instanceof Error ? error.message : error);
+            console.log('Primary RSS-to-JSON failed:', error instanceof Error ? error.message : error);
         }
 
-        // Try alternative RSS-to-JSON services
-        const rssToJsonServices = [
-            `https://rss-to-json-serverless-api.vercel.app/api?feedURL=${encodeURIComponent(feedUrl)}`,
-            `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feedUrl)}`,
-            `https://feed2json.org/convert?url=${encodeURIComponent(feedUrl)}`
-        ];
-
-        for (const serviceUrl of rssToJsonServices) {
-            try {
-                console.log(`Trying alternative RSS-to-JSON service: ${serviceUrl.split('?')[0]}`);
-                const response = await axios.get(serviceUrl, {
-                    timeout: 5000,
-                    headers: {
-                        'Accept': 'application/json',
-                        'User-Agent': 'Mozilla/5.0 (compatible; NewsAggregator/1.0)'
-                    }
-                });
-
-                if (response.data) {
-                    articles = this.parseAlternativeRSSJson(response.data, feedUrl, filters);
-                    if (articles.length > 0) {
-                        console.log(`Success with alternative service: ${articles.length} articles`);
-                        return articles;
-                    }
+        // Try one more alternative service if first fails
+        try {
+            const alternativeUrl = `https://rss-to-json-serverless-api.vercel.app/api?feedURL=${encodeURIComponent(feedUrl)}`;
+            const response = await axios.get(alternativeUrl, {
+                timeout: 2000, // Very short timeout
+                headers: {
+                    'Accept': 'application/json'
                 }
-            } catch (error) {
-                console.log(`Alternative RSS service failed: ${error instanceof Error ? error.message : error}`);
-                continue;
+            });
+
+            if (response.data) {
+                const articles = this.parseAlternativeRSSJson(response.data, feedUrl, filters);
+                if (articles.length > 0) {
+                    console.log(`Success with alternative service: ${articles.length} articles`);
+                    return articles;
+                }
             }
+        } catch (error) {
+            console.log(`Alternative RSS service failed: ${error instanceof Error ? error.message : error}`);
         }
 
-        return [];
+        return []; // Fail fast instead of trying many services
     }
 
     // Try primary RSS-to-JSON service
     private async tryRSSToJson(feedUrl: string, filters: NewsFilter): Promise<NewsArticle[]> {
-        const rssToJsonUrl = `https://rss2json.com/api.json?rss_url=${encodeURIComponent(feedUrl)}`;
-        
+        // Use the more reliable rss2json.com service
+        const rssToJsonUrl = `https://rss2json.com/api.json?rss_url=${encodeURIComponent(feedUrl)}&count=3`;
+
         const response = await axios.get(rssToJsonUrl, {
-            timeout: 5000,
+            timeout: 2000, // Reduced timeout for speed
             headers: {
-                'Accept': 'application/json',
-                'User-Agent': 'Mozilla/5.0 (compatible; NewsAggregator/1.0)'
+                'Accept': 'application/json'
             }
         });
 
         if (response.data?.status === 'ok' && response.data.items) {
             return this.parseRSSJsonResponse(response.data, feedUrl, filters);
         }
-        
+
         throw new Error('Invalid RSS-to-JSON response');
     }
 
@@ -479,15 +558,15 @@ class NewsService {
     private parseAlternativeRSSJson(data: any, feedUrl: string, filters: NewsFilter): NewsArticle[] {
         const articles: NewsArticle[] = [];
         const sourceName = this.getSourceNameFromUrl(feedUrl);
-        
+
         // Different services have different response formats
         let items = data.items || data.entries || data.feed?.entries || [];
-        
+
         console.log(`Processing ${items.length} items from alternative RSS service for ${sourceName}`);
 
         for (let i = 0; i < Math.min(items.length, 5); i++) {
             const item = items[i];
-            
+
             const title = item.title?.trim() || item.name?.trim();
             const link = item.link || item.url || item.guid || item.id;
             const description = item.description || item.content || item.summary || item.contentSnippet;
@@ -532,13 +611,13 @@ class NewsService {
     private parseRSSJsonResponse(data: any, feedUrl: string, filters: NewsFilter): NewsArticle[] {
         const articles: NewsArticle[] = [];
         const sourceName = this.getSourceNameFromUrl(feedUrl);
-        
+
         console.log(`Processing ${data.items?.length || 0} items from RSS-to-JSON for ${sourceName}`);
 
         const items = data.items || [];
         for (let i = 0; i < Math.min(items.length, 5); i++) {
             const item = items[i];
-            
+
             const title = item.title?.trim();
             const link = item.link || item.guid;
             const description = item.description || item.content || item.summary;
@@ -580,195 +659,10 @@ class NewsService {
         return articles;
     }
 
-    // Fetch and parse individual RSS feed
-    private async fetchRSSFeed(feedUrl: string, filters: NewsFilter): Promise<NewsArticle[]> {
-        try {
-            console.log(`Attempting to fetch RSS feed: ${feedUrl}`);
-            
-            // Try multiple CORS proxies - updated with working proxies
-            const proxies = [
-                `https://api.allorigins.win/get?url=${encodeURIComponent(feedUrl)}`,
-                `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(feedUrl)}`,
-                `https://corsproxy.io/?${encodeURIComponent(feedUrl)}`,
-                `https://proxy.cors.sh/${feedUrl}`,
-                `https://cors-proxy.htmldriven.com/?url=${encodeURIComponent(feedUrl)}`
-            ];
-
-            for (let i = 0; i < proxies.length; i++) {
-                try {
-                    const proxyUrl = proxies[i];
-                    console.log(`Trying proxy ${i + 1}: ${proxyUrl.split('?')[0]}`);
-                    
-                    const response = await axios.get(proxyUrl, {
-                        timeout: 6000, // Reduced to 6 seconds for faster fallback
-                        headers: {
-                            'Accept': 'application/json, application/xml, text/xml, */*',
-                            'User-Agent': 'Mozilla/5.0 (compatible; NewsAggregator/1.0)'
-                        }
-                    });
-
-                    let content = '';
-                    
-                    // Handle different proxy response formats
-                    if (response.data?.contents) {
-                        // allorigins.win format
-                        content = response.data.contents;
-                    } else if (response.data?.body) {
-                        // Some proxies use 'body' field
-                        content = response.data.body;
-                    } else if (response.data?.data) {
-                        // Some proxies use 'data' field
-                        content = response.data.data;
-                    } else if (typeof response.data === 'string') {
-                        // Direct content or other proxy formats
-                        content = response.data;
-                    } else {
-                        console.log(`Unexpected response format from proxy ${i + 1}:`, typeof response.data);
-                        console.log('Response keys:', Object.keys(response.data || {}));
-                        continue;
-                    }
-
-                    if (!content || content.trim().length === 0) {
-                        console.log(`Empty content from proxy ${i + 1}`);
-                        continue;
-                    }
-
-                    const articles = this.parseRSSContent(content, feedUrl, filters);
-                    if (articles.length > 0) {
-                        console.log(`Successfully parsed ${articles.length} articles using proxy ${i + 1}`);
-                        return articles;
-                    }
-                    
-                } catch (proxyError) {
-                    console.log(`Proxy ${i + 1} failed:`, proxyError instanceof Error ? proxyError.message : proxyError);
-                    continue;
-                }
-            }
-
-            throw new Error('All proxies failed');
-
-        } catch (error) {
-            console.error(`Failed to fetch RSS from ${feedUrl}:`, error instanceof Error ? error.message : error);
-            return [];
-        }
-    }
-
-    // Parse RSS XML content
-    private parseRSSContent(xmlContent: string, feedUrl: string, filters: NewsFilter): NewsArticle[] {
-        try {
-            // Clean and prepare XML content
-            let cleanXml = xmlContent.trim();
-            
-            // Remove any BOM (Byte Order Mark) characters
-            cleanXml = cleanXml.replace(/^\uFEFF/, '');
-            
-            // Check if content looks like XML
-            if (!cleanXml.includes('<') || !cleanXml.includes('>')) {
-                console.log('Content does not appear to be XML:', cleanXml.substring(0, 100));
-                return [];
-            }
-
-            // Try to fix common XML issues
-            cleanXml = cleanXml.replace(/&(?!(amp|lt|gt|quot|apos);)/g, '&amp;');
-            
-            const parser = new DOMParser();
-            const xmlDoc = parser.parseFromString(cleanXml, 'application/xml');
-            
-            // Check for parsing errors more thoroughly
-            const parserError = xmlDoc.querySelector('parsererror');
-            if (parserError || xmlDoc.documentElement.tagName === 'parsererror') {
-                console.log('XML parsing failed, trying as text/xml');
-                // Try parsing as text/xml instead
-                const xmlDoc2 = parser.parseFromString(cleanXml, 'text/xml');
-                const parserError2 = xmlDoc2.querySelector('parsererror');
-                if (parserError2) {
-                    throw new Error(`XML parsing failed: ${parserError2.textContent}`);
-                }
-                return this.extractArticlesFromXml(xmlDoc2, feedUrl, filters);
-            }
-
-            return this.extractArticlesFromXml(xmlDoc, feedUrl, filters);
-        } catch (error) {
-            console.error('RSS parsing error:', error);
-            console.log('Failed XML content (first 500 chars):', xmlContent.substring(0, 500));
-            return [];
-        }
-    }
-
-    // Extract articles from parsed XML document
-    private extractArticlesFromXml(xmlDoc: Document, feedUrl: string, filters: NewsFilter): NewsArticle[] {
-        const items = xmlDoc.querySelectorAll('item, entry'); // Support both RSS and Atom feeds
-        const articles: NewsArticle[] = [];
-        const sourceName = this.getSourceNameFromUrl(feedUrl);
-
-        console.log(`Found ${items.length} items in RSS feed from ${sourceName}`);
-
-        for (let i = 0; i < Math.min(items.length, 5); i++) { // Max 5 articles per feed
-            const item = items[i];
-            
-            // Try different selectors for RSS vs Atom feeds
-            const title = this.getTextContent(item, ['title']);
-            const link = this.getTextContent(item, ['link', 'guid']) || 
-                        item.querySelector('link')?.getAttribute('href');
-            const description = this.getTextContent(item, ['description', 'summary', 'content']);
-            const pubDate = this.getTextContent(item, ['pubDate', 'published', 'updated']);
-            const author = this.getTextContent(item, ['author', 'dc:creator', 'creator']) ||
-                          item.querySelector('author name')?.textContent?.trim();
-
-            if (!title || !link) {
-                console.log('Skipping item - missing title or link');
-                continue;
-            }
-
-            // Filter relevance for Indian content
-            if (!this.isRelevantIndianArticle(title, description || '', filters.category || 'ai')) {
-                console.log('Skipping irrelevant article:', title.substring(0, 50));
-                continue;
-            }
-
-            const cleanDescription = this.cleanHtmlTags(description || '');
-            const publishedAt = this.parseDate(pubDate);
-
-            articles.push({
-                id: this.generateId(link),
-                title: this.cleanHtmlTags(title),
-                description: cleanDescription.substring(0, 200) + (cleanDescription.length > 200 ? '...' : ''),
-                content: cleanDescription,
-                url: link,
-                urlToImage: this.getValidImageUrl(null, title, filters.category || 'ai'),
-                publishedAt,
-                source: {
-                    id: sourceName.toLowerCase().replace(/\s+/g, '-'),
-                    name: sourceName
-                },
-                author: author || 'Unknown Author',
-                category: (filters.category === 'ai' || filters.category === 'startup') ? filters.category : 'ai',
-                region: 'india',
-                tags: this.extractTags(title + ' ' + cleanDescription),
-                readTime: this.calculateReadTime(cleanDescription),
-                isMockArticle: false
-            });
-        }
-
-        console.log(`Successfully parsed ${articles.length} articles from ${sourceName}`);
-        return articles;
-    }
-
-    // Helper to get text content from multiple possible selectors
-    private getTextContent(element: Element, selectors: string[]): string | null {
-        for (const selector of selectors) {
-            const found = element.querySelector(selector);
-            if (found?.textContent?.trim()) {
-                return found.textContent.trim();
-            }
-        }
-        return null;
-    }
-
     // Parse date with fallback
     private parseDate(dateStr: string | null): string {
         if (!dateStr) return new Date().toISOString();
-        
+
         try {
             const date = new Date(dateStr);
             return isNaN(date.getTime()) ? new Date().toISOString() : date.toISOString();
@@ -835,7 +729,7 @@ class NewsService {
             totalResults: data.totalResults,
             articlesLength: data.articles?.length
         });
-        
+
         if (!data.articles || data.articles.length === 0) {
             console.log('No articles in NewsAPI response, falling back to mock data');
             return [];
@@ -952,6 +846,22 @@ class NewsService {
             'fifa.com'
         ];
 
+        // Boost relevance for Indian tech/business sources
+        const indianSources = [
+            'economictimes.indiatimes.com',
+            'livemint.com',
+            'timesofindia.indiatimes.com',
+            'business-standard.com',
+            'financialexpress.com',
+            'inc42.com',
+            'yourstory.com',
+            'entrackr.com',
+            'medianama.com',
+            'analyticsindiamag.com'
+        ];
+
+        const isIndianSource = article.url && indianSources.some(domain => article.url.includes(domain));
+
         // Check if article is from sports/irrelevant domains
         if (article.url && irrelevantDomains.some(domain => article.url.includes(domain))) {
             console.log('Filtering out irrelevant article from sports domain:', article.title);
@@ -976,18 +886,23 @@ class NewsService {
             ];
 
             // Must contain at least one specific AI keyword
-            const hasAiKeyword = aiKeywords.some(keyword => 
+            const hasAiKeyword = aiKeywords.some(keyword =>
                 content.includes(keyword) || content.includes(keyword.replace(' ', '-'))
             );
 
             // Exclude sports-related content even if it mentions AI
             const sportsKeywords = [
-                'football', 'soccer', 'madrid', 'barcelona', 'premier league', 
+                'football', 'soccer', 'madrid', 'barcelona', 'premier league',
                 'champions league', 'fifa', 'uefa', 'goal', 'kit', 'jersey',
                 'match', 'game', 'score', 'player', 'team', 'stadium'
             ];
 
             const isSports = sportsKeywords.some(keyword => content.includes(keyword));
+
+            // For Indian region, be more lenient with Indian sources
+            if (filters.region === 'india' && isIndianSource) {
+                return hasAiKeyword && !isSports;
+            }
 
             return hasAiKeyword && !isSports;
         }
@@ -1001,14 +916,19 @@ class NewsService {
                 'entrepreneur', 'founder', 'fintech', 'saas'
             ];
 
-            return startupKeywords.some(keyword => content.includes(keyword));
+            const hasStartupKeyword = startupKeywords.some(keyword => content.includes(keyword));
+
+            // For Indian region, be more lenient with Indian sources
+            if (filters.region === 'india' && isIndianSource) {
+                return hasStartupKeyword;
+            }
+
+            return hasStartupKeyword;
         }
 
         // For other categories, allow all articles
         return true;
-    }
-
-    private calculateReadTime(content: string): number {
+    }    private calculateReadTime(content: string): number {
         const wordsPerMinute = 200;
         const words = content.split(' ').length;
         return Math.ceil(words / wordsPerMinute);

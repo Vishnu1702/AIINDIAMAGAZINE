@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ExternalLink, Bookmark, BookmarkCheck, Clock, Share2 } from 'lucide-react';
 import type { NewsArticle, UserPreferences } from '../types/news';
 
@@ -18,6 +18,35 @@ export default function NewsCard({ article, compact = false, preferences, onUpda
         return article.isBookmarked || false;
     });
     const [imageError, setImageError] = useState(false);
+    const [validImageUrl, setValidImageUrl] = useState<string | null>(null);
+
+    // Validate image URL on mount
+    useEffect(() => {
+        const validateImageUrl = (url: string): boolean => {
+            if (!url || typeof url !== 'string') return false;
+            
+            try {
+                new URL(url);
+            } catch {
+                return false;
+            }
+            
+            // Check for common broken image patterns
+            const brokenPatterns = [
+                'removed.png', 'deleted.jpg', 'placeholder.jpg', 'default.png',
+                'no-image', 'image-not-found', 'broken.jpg', 'missing.png',
+                'thumbnail.jpg', 'avatar.png', 'logo.png', 'icon.png'
+            ];
+            
+            return !brokenPatterns.some(pattern => url.toLowerCase().includes(pattern));
+        };
+
+        if (article.urlToImage && validateImageUrl(article.urlToImage)) {
+            setValidImageUrl(article.urlToImage);
+        } else {
+            setImageError(true);
+        }
+    }, [article.urlToImage]);
 
     const handleBookmark = (e: React.MouseEvent) => {
         e.preventDefault();
@@ -120,16 +149,35 @@ export default function NewsCard({ article, compact = false, preferences, onUpda
         <article className="news-card group cursor-pointer overflow-hidden" onClick={handleArticleClick}>
             {/* Image */}
             <div className="relative overflow-hidden">
-                {!imageError && article.urlToImage ? (
+                {!imageError && validImageUrl ? (
                     <img
-                        src={article.urlToImage}
+                        src={validImageUrl}
                         alt={article.title}
                         className="news-card-image group-hover:scale-105 transition-transform duration-300"
                         onError={() => setImageError(true)}
                     />
                 ) : (
                     <div className="news-card-image bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 flex items-center justify-center">
-                        <div className="text-4xl opacity-50">📰</div>
+                        <div 
+                            className="w-full h-full flex items-center justify-center"
+                            dangerouslySetInnerHTML={{
+                                __html: `
+                                <svg viewBox="0 0 400 200" class="w-full h-full">
+                                    <defs>
+                                        <linearGradient id="bg-${article.id}" x1="0%" y1="0%" x2="100%" y2="100%">
+                                            <stop offset="0%" style="stop-color:#f8fafc;stop-opacity:1" />
+                                            <stop offset="100%" style="stop-color:#e2e8f0;stop-opacity:1" />
+                                        </linearGradient>
+                                    </defs>
+                                    <rect width="400" height="200" fill="url(#bg-${article.id})" />
+                                    <circle cx="150" cy="70" r="25" fill="#cbd5e1" opacity="0.6" />
+                                    <rect x="200" y="60" width="120" height="8" rx="4" fill="#94a3b8" opacity="0.7" />
+                                    <rect x="200" y="75" width="80" height="6" rx="3" fill="#cbd5e1" opacity="0.6" />
+                                    <circle cx="250" cy="130" r="35" fill="#94a3b8" opacity="0.4" />
+                                    <text x="200" y="150" font-family="Arial, sans-serif" font-size="14" fill="#64748b" opacity="0.8">News Image</text>
+                                </svg>`
+                            }}
+                        />
                     </div>
                 )}
 
