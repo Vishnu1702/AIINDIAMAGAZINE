@@ -133,9 +133,9 @@ class NewsService {
             // Build simpler query to avoid 400 errors
             let query = '';
             if (filters.category === 'ai') {
-                query = 'artificial intelligence';
+                query = 'artificial intelligence OR AI OR "machine learning"';
             } else if (filters.category === 'startup') {
-                query = 'startup funding';
+                query = 'startup OR "venture capital" OR funding';
             } else {
                 query = 'technology';
             }
@@ -143,8 +143,6 @@ class NewsService {
             // For India-specific content, adjust the query
             if (filters.region === 'india') {
                 query += ' India';
-                // Don't use country parameter with everything endpoint
-                // params.append('country', 'in'); // This causes issues with /everything endpoint
             }
 
             params.append('q', query);
@@ -160,7 +158,10 @@ class NewsService {
             });
 
             console.log('NewsAPI response status:', response.status);
-            return this.transformNewsApiResponse(response.data, filters);
+            console.log('NewsAPI response data keys:', Object.keys(response.data));
+            const transformedArticles = this.transformNewsApiResponse(response.data, filters);
+            console.log('Transformed articles from NewsAPI:', transformedArticles.length);
+            return transformedArticles;
         } catch (error) {
             if (axios.isAxiosError(error)) {
                 console.error('NewsAPI error:', {
@@ -264,21 +265,29 @@ class NewsService {
 
     // Aggregate articles from multiple sources
     async getAggregatedNews(filters: NewsFilter): Promise<NewsArticle[]> {
+        console.log('getAggregatedNews called with filters:', filters);
         try {
             let allArticles: NewsArticle[] = [];
 
             // Get NewsAPI articles
+            console.log('Fetching NewsAPI articles...');
             const newsApiArticles = await this.getNewsApiArticles(filters);
+            console.log('NewsAPI articles received:', newsApiArticles.length);
             allArticles = allArticles.concat(newsApiArticles);
 
             // If filtering for India, add Indian-specific sources
             if (filters.region === 'india') {
+                console.log('Fetching Indian RSS articles...');
                 const indianArticles = await this.getIndianRSSNews(filters);
+                console.log('Indian RSS articles received:', indianArticles.length);
                 allArticles = allArticles.concat(indianArticles);
             }
 
+            console.log('Total articles before deduplication:', allArticles.length);
+
             // If no articles from APIs, return mock data
             if (allArticles.length === 0) {
+                console.log('No real articles found, returning mock data');
                 return filters.region === 'india'
                     ? this.getEnhancedIndianMockData(filters)
                     : this.getMockArticles(filters);
@@ -286,6 +295,7 @@ class NewsService {
 
             // Remove duplicates and sort by date
             const uniqueArticles = this.removeDuplicates(allArticles);
+            console.log('Final unique articles:', uniqueArticles.length);
             return uniqueArticles.sort((a, b) =>
                 new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
             );
@@ -528,7 +538,18 @@ class NewsService {
     }
 
     private transformNewsApiResponse(data: any, filters: NewsFilter): NewsArticle[] {
-        return data.articles?.map((article: any) => ({
+        console.log('NewsAPI raw response:', {
+            status: data.status,
+            totalResults: data.totalResults,
+            articlesLength: data.articles?.length
+        });
+        
+        if (!data.articles || data.articles.length === 0) {
+            console.log('No articles in NewsAPI response, falling back to mock data');
+            return [];
+        }
+
+        const transformedArticles = data.articles.map((article: any) => ({
             id: this.generateId(article.url),
             title: article.title,
             description: article.description || '',
@@ -545,7 +566,11 @@ class NewsService {
             region: filters.region || 'world',
             tags: this.extractTags(article.title + ' ' + article.description),
             readTime: this.calculateReadTime(article.content),
-        })) || [];
+            isMockArticle: false, // Mark real articles as not mock
+        }));
+
+        console.log('Transformed articles count:', transformedArticles.length);
+        return transformedArticles;
     }
 
     private transformNewsAiResponse(data: any, filters: NewsFilter): NewsArticle[] {
